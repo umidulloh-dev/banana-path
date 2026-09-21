@@ -1,0 +1,39 @@
+// Banana Path data model.
+// Three tables: the (single) site owner, their learning progress, and a cache
+// of generated lessons so the same prompt is not paid for twice in a day.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String    @id @default(uuid())
+  username  String    @unique
+  createdAt DateTime  @default(now())
+  progress  Progress?
+}
+
+/// The whole frontend state object (`S`) is stored as one JSON blob:
+/// the browser owns its shape, the server only owns who it belongs to.
+model Progress {
+  userId    String   @id
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  data      Json
+  updatedAt DateTime @updatedAt
+}
+
+/// Generated-lesson cache. `key` is a sha256 of model + prompt, so an
+/// identical prompt is served from Postgres instead of the Anthropic API.
+model LessonCache {
+  key       String   @id
+  payload   Json
+  createdAt DateTime @default(now())
+  expiresAt DateTime
+
+  @@index([expiresAt])
+}

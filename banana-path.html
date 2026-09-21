@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Путь к банану</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EEF1F8; --surface:#FFFFFF; --surface-2:#F6F8FC; --ink:#1B2140; --muted:#636C8F; --line:#D9DEEC;
+  --banana:#FFC61A; --banana-deep:#D69E00; --green:#2FB457; --green-deep:#1F8A40; --green-tint:#DDF6E4;
+  --red:#EF4E4B; --red-deep:#BF3431; --red-tint:#FDE3E2; --blue:#3E8BFF; --blue-tint:#E3EEFF;
+  --locked:#D3D9E8; --locked-deep:#B6BED3; --code-bg:#1C2238; --code-ink:#E7EAF6;
+  --shadow:0 2px 0 var(--line);
+  --font:"Rubik", system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:light;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10152A; --surface:#1A2140; --surface-2:#151B35; --ink:#EDF0FA; --muted:#9AA3C6; --line:#2B345C;
+    --green-tint:#143A25; --red-tint:#3F1A1F; --blue-tint:#172B52; --locked:#2B3459; --locked-deep:#1E2545;
+    --code-bg:#0B0F20; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10152A; --surface:#1A2140; --surface-2:#151B35; --ink:#EDF0FA; --muted:#9AA3C6; --line:#2B345C;
+  --green-tint:#143A25; --red-tint:#3F1A1F; --blue-tint:#172B52; --locked:#2B3459; --locked-deep:#1E2545;
+  --code-bg:#0B0F20; color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:calc(env(safe-area-inset-top,0px) + 80px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--font);font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+button{font-family:inherit;cursor:pointer}
+button:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+code{font-family:var(--mono);font-size:.88em;background:var(--surface-2);border:1px solid var(--line);padding:1px 6px;border-radius:6px}
+pre{margin:12px 0;background:var(--code-bg);color:var(--code-ink);border-radius:14px;padding:14px 16px;overflow-x:auto;font-family:var(--mono);font-size:13.5px;line-height:1.6}
+pre code{background:none;border:0;padding:0;font-size:inherit;color:inherit}
+.tk-k{color:#FF8FB1}.tk-s{color:#B6E3A0}.tk-c{color:#7C86AD;font-style:italic}.tk-n{color:#FFC96B}
+
+/* ---------- top bar ---------- */
+.topbar{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:2px solid var(--line)}
+.topbar-in{max-width:1080px;margin:0 auto;display:flex;align-items:center;gap:10px;padding:10px 16px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:800;font-size:20px;letter-spacing:-.02em;margin-right:auto}
+.brand svg{width:34px;height:34px}
+.stat{display:flex;align-items:center;gap:6px;font-weight:700;padding:6px 10px;border-radius:12px;background:transparent;border:0;color:var(--ink);font-size:16px}
+.stat .ic{font-size:20px;line-height:1}
+.stat.streak.off .ic{filter:grayscale(1);opacity:.5}
+.stat.streak.on{color:#F97316}
+.stat.bananas{color:var(--banana-deep)}
+.iconbtn{width:38px;height:38px;border-radius:12px;border:2px solid var(--line);background:var(--surface);color:var(--ink);display:grid;place-items:center;font-size:17px;box-shadow:0 2px 0 var(--line)}
+.iconbtn:active{transform:translateY(2px);box-shadow:none}
+
+/* ---------- layout ---------- */
+.layout{max-width:1080px;margin:0 auto;display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:36px;padding:24px 16px 120px}
+@media (max-width:880px){.layout{grid-template-columns:minmax(0,1fr)}.side{order:-1}}
+.side{display:flex;flex-direction:column;gap:16px}
+@media (min-width:881px){.side{position:sticky;top:90px;align-self:start}}
+.panel{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:16px 18px}
+.panel h3{margin:0 0 10px;font-size:17px;font-weight:700}
+.goal-row{display:flex;align-items:center;gap:14px}
+.ring{width:64px;height:64px;flex:none}
+.ring circle{fill:none;stroke-width:8}
+.ring .bgc{stroke:var(--line)}
+.ring .fg{stroke:var(--banana);stroke-linecap:round;transition:stroke-dashoffset .8s cubic-bezier(.2,.8,.2,1)}
+.muted{color:var(--muted)}
+.small{font-size:14px}
+.leet{display:grid;grid-template-columns:1fr auto;gap:8px 12px;align-items:center}
+.counter{display:flex;align-items:center;gap:8px;font-weight:700}
+.counter button{width:30px;height:30px;border-radius:10px;border:2px solid var(--line);background:var(--surface-2);color:var(--ink);font-weight:700}
+.bar{height:12px;border-radius:99px;background:var(--line);overflow:hidden}
+.bar > i{display:block;height:100%;background:var(--green);border-radius:99px;transition:width .6s cubic-bezier(.2,.8,.2,1)}
+.linkbtn{background:none;border:0;color:var(--muted);text-decoration:underline;padding:0;font-size:14px}
+@media (max-width:880px){.side .panel.hide-m{display:none}}
+
+/* ---------- path ---------- */
+.unit{margin-bottom:28px}
+.unit-banner{position:sticky;top:calc(64px + env(safe-area-inset-top,0px));z-index:10;background:var(--uc);color:#fff;border-radius:18px;padding:14px 18px;display:flex;align-items:center;gap:12px;box-shadow:0 4px 0 var(--ud)}
+.unit-banner .t{font-weight:800;font-size:20px;line-height:1.2}
+.unit-banner .w{font-size:14px;opacity:.9;font-weight:500}
+.unit-banner .grow{flex:1;min-width:0}
+.unit-banner .prog{font-weight:700;font-size:14px;background:rgba(255,255,255,.22);padding:4px 10px;border-radius:10px;white-space:nowrap}
+.unit.locked-unit .unit-banner{filter:saturate(.35) brightness(.95)}
+.path{position:relative;display:flex;flex-direction:column;align-items:center;padding:30px 0 10px}
+.row{position:relative;height:136px;display:flex;justify-content:center;align-items:flex-start;width:100%}
+.row.has-pop{z-index:25}
+.node-wrap{position:relative;transition:transform .3s}
+.node{--c:var(--uc);--d:var(--ud);width:74px;height:70px;border-radius:50%;border:0;background:var(--c);box-shadow:0 7px 0 var(--d);display:grid;place-items:center;color:#fff;position:relative;transition:transform .1s, box-shadow .1s}
+.node svg{width:34px;height:34px}
+.node:active{transform:translateY(5px);box-shadow:0 2px 0 var(--d)}
+.node.locked{--c:var(--locked);--d:var(--locked-deep);color:var(--muted)}
+.node.open-soft{outline:4px solid color-mix(in srgb, var(--uc) 35%, transparent);outline-offset:5px}
+.node.current::before{content:"";position:absolute;inset:-12px;border-radius:50%;border:5px solid color-mix(in srgb, var(--uc) 40%, transparent);animation:pulse 1.8s ease-out infinite}
+.node.checkpoint{width:86px;height:80px;border-radius:26px}
+.node.done .badge{position:absolute;right:-4px;bottom:-4px;width:26px;height:26px;border-radius:50%;background:var(--banana);border:3px solid var(--bg);display:grid;place-items:center;color:#5A4200}
+.node.done .badge svg{width:14px;height:14px}
+@keyframes pulse{0%{transform:scale(.9);opacity:1}100%{transform:scale(1.25);opacity:0}}
+.start-bubble{position:absolute;left:50%;bottom:calc(100% + 16px);transform:translateX(-50%);background:var(--surface);color:var(--uc);border:2px solid var(--line);font-weight:800;padding:6px 14px;border-radius:12px;white-space:nowrap;animation:bob 1.4s ease-in-out infinite;pointer-events:none;font-size:15px}
+.start-bubble::after{content:"";position:absolute;left:50%;top:100%;transform:translateX(-50%);border:8px solid transparent;border-top-color:var(--line)}
+@keyframes bob{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-6px)}}
+.node-label{position:absolute;top:calc(100% + 14px);left:50%;transform:translateX(-50%);font-size:13px;font-weight:600;color:var(--muted);white-space:nowrap;max-width:180px;overflow:hidden;text-overflow:ellipsis;pointer-events:none}
+.mascot-side{position:absolute;top:-18px;width:110px;height:110px;pointer-events:none}
+.mascot-side svg{width:100%;height:100%;animation:sway 3s ease-in-out infinite;transform-origin:50% 90%}
+@keyframes sway{0%,100%{transform:rotate(-6deg)}50%{transform:rotate(6deg)}}
+
+/* popover */
+.pop{position:absolute;z-index:20;top:calc(100% + 18px);left:50%;width:min(330px,86vw);transform:translateX(-50%);background:var(--uc);color:#fff;border-radius:18px;padding:16px 16px 14px;box-shadow:0 5px 0 var(--ud);animation:popin .22s cubic-bezier(.2,1.4,.4,1)}
+.pop::before{content:"";position:absolute;bottom:100%;left:50%;transform:translateX(-50%);border:10px solid transparent;border-bottom-color:var(--uc)}
+.pop h4{margin:0 0 4px;font-size:18px;font-weight:800;line-height:1.25}
+.pop ul{margin:6px 0 12px;padding-left:18px;font-size:14px;opacity:.95}
+.pop .meta{font-size:13px;opacity:.9;margin-bottom:6px}
+.pop .btn{width:100%;--c:#fff;--d:rgba(0,0,0,.25);color:var(--uc)}
+.pop .alt{display:block;margin:10px auto 0;background:none;border:0;color:#fff;opacity:.85;text-decoration:underline;font-size:14px}
+@keyframes popin{from{opacity:0;transform:translateX(-50%) scale(.85)}to{opacity:1;transform:translateX(-50%) scale(1)}}
+
+/* ---------- buttons ---------- */
+.btn{--c:var(--green);--d:var(--green-deep);background:var(--c);color:#fff;border:0;border-radius:14px;padding:13px 22px;font-weight:700;font-size:16px;box-shadow:0 4px 0 var(--d);transition:transform .08s, box-shadow .08s, filter .15s;letter-spacing:.01em}
+.btn:active:not(:disabled){transform:translateY(4px);box-shadow:0 0 0 var(--d)}
+.btn:disabled{--c:var(--locked);--d:var(--locked-deep);color:var(--muted);cursor:not-allowed}
+.btn.ghost{--c:var(--surface);--d:var(--line);color:var(--ink);border:2px solid var(--line)}
+.btn.blue{--c:var(--blue);--d:#2A68CC}
+.btn.red{--c:var(--red);--d:var(--red-deep)}
+.btn.wide{width:100%}
+
+/* ---------- lesson overlay ---------- */
+.overlay{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);animation:slideup .28s cubic-bezier(.2,.9,.3,1)}
+@keyframes slideup{from{transform:translateY(24px);opacity:0}to{transform:none;opacity:1}}
+.ov-head{display:flex;align-items:center;gap:14px;max-width:760px;width:100%;margin:0 auto;padding:16px}
+.ov-head .x{background:none;border:0;color:var(--muted);font-size:26px;line-height:1;padding:4px}
+.lbar{flex:1;height:16px;border-radius:99px;background:var(--line);overflow:hidden}
+.lbar i{display:block;height:100%;width:0;background:var(--green);border-radius:99px;position:relative;transition:width .45s cubic-bezier(.2,.9,.3,1.2)}
+.lbar i::after{content:"";position:absolute;left:10px;right:10px;top:3px;height:4px;border-radius:9px;background:rgba(255,255,255,.35)}
+.hearts{display:flex;align-items:center;gap:4px;font-weight:800;color:var(--red)}
+.hearts.hit{animation:shake .4s}
+.ov-body{flex:1;overflow-y:auto;padding:8px 16px 24px}
+.ov-inner{max-width:640px;margin:0 auto}
+.ov-foot{border-top:2px solid var(--line);background:var(--bg);transition:background .2s}
+.ov-foot-in{max-width:760px;margin:0 auto;padding:16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap}
+.ov-foot .msg{flex:1;min-width:200px}
+.ov-foot.ok{background:var(--green-tint);border-top-color:transparent}
+.ov-foot.bad{background:var(--red-tint);border-top-color:transparent}
+.ov-foot .verdict{font-weight:800;font-size:20px;display:flex;align-items:center;gap:8px}
+.ov-foot.ok .verdict{color:var(--green-deep)} .ov-foot.bad .verdict{color:var(--red)}
+.ov-foot .explain{font-size:15px;margin-top:4px;max-height:34vh;overflow:auto}
+.ov-foot.ok .explain,.ov-foot.bad .explain{color:var(--ink)}
+.ov-foot .btn{min-width:160px}
+@media (max-width:560px){.ov-foot .btn{width:100%}}
+.foot-anim{animation:footin .25s cubic-bezier(.2,1.2,.4,1)}
+@keyframes footin{from{transform:translateY(20px);opacity:.4}to{transform:none;opacity:1}}
+.kicker{font-weight:700;color:var(--muted);font-size:14px;margin:10px 0 6px}
+.q{font-size:22px;font-weight:700;line-height:1.3;margin:4px 0 14px}
+.card{background:var(--surface);border:2px solid var(--line);border-radius:18px;padding:18px 20px;animation:cardin .3s cubic-bezier(.2,.9,.3,1)}
+@keyframes cardin{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
+.card h2{margin:0 0 10px;font-size:22px;line-height:1.25}
+.card p{margin:0 0 10px}
+.md p{margin:0 0 10px}.md ul{margin:0 0 10px;padding-left:20px}.md li{margin:2px 0}
+.opts{display:grid;gap:10px;margin-top:8px}
+.opt{display:flex;align-items:flex-start;gap:12px;text-align:left;width:100%;background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:14px;padding:13px 14px;font-size:16px;box-shadow:0 3px 0 var(--line);transition:transform .08s, box-shadow .08s, border-color .15s, background .15s}
+.opt:active:not(:disabled){transform:translateY(3px);box-shadow:none}
+.opt .k{flex:none;width:26px;height:26px;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;font-size:13px;font-weight:700;color:var(--muted)}
+.opt .ot{min-width:0;overflow-wrap:anywhere}
+.opt.sel{border-color:var(--blue);background:var(--blue-tint);box-shadow:0 3px 0 var(--blue)}
+.opt.sel .k{border-color:var(--blue);color:var(--blue)}
+.opt.right{border-color:var(--green);background:var(--green-tint);box-shadow:0 3px 0 var(--green)}
+.opt.wrong{border-color:var(--red);background:var(--red-tint);box-shadow:0 3px 0 var(--red);animation:shake .4s}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+textarea.code{width:100%;min-height:220px;resize:vertical;background:var(--code-bg);color:var(--code-ink);border:2px solid var(--line);border-radius:14px;padding:14px;font-family:var(--mono);font-size:14px;line-height:1.6;tab-size:2}
+textarea.plain{width:100%;min-height:120px;resize:vertical;background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:14px;padding:12px 14px;font-family:var(--font);font-size:15px}
+.hint{margin-top:10px;font-size:14px}
+.hint summary{cursor:pointer;color:var(--blue);font-weight:600}
+.review{margin-top:14px}
+.center{text-align:center}
+.loading{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;min-height:60vh;text-align:center}
+.loading .m{width:130px;height:130px}
+.loading .m svg{width:100%;height:100%;animation:hop 1s cubic-bezier(.3,0,.3,1) infinite}
+@keyframes hop{0%,100%{transform:translateY(0) rotate(-4deg)}50%{transform:translateY(-18px) rotate(4deg)}}
+.dots::after{content:"";animation:dots 1.2s steps(4) infinite}
+@keyframes dots{0%{content:""}25%{content:"."}50%{content:".."}75%{content:"..."}}
+.tip{max-width:420px;min-height:48px;transition:opacity .3s}
+.result{display:flex;flex-direction:column;align-items:center;gap:16px;padding-top:4vh;text-align:center}
+.result h2{font-size:30px;margin:0;color:var(--banana-deep);font-weight:800}
+.result .m{width:150px;height:150px}
+.result .m svg{width:100%;height:100%;animation:cheer .9s cubic-bezier(.2,1.5,.4,1)}
+@keyframes cheer{0%{transform:scale(.3) rotate(-30deg)}100%{transform:scale(1) rotate(0)}}
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%;max-width:460px}
+.tile{border-radius:16px;border:2px solid var(--tc);overflow:hidden;background:var(--surface);animation:tilein .5s cubic-bezier(.2,1.4,.4,1) both}
+.tile:nth-child(2){animation-delay:.12s}.tile:nth-child(3){animation-delay:.24s}
+@keyframes tilein{from{transform:translateY(20px) scale(.8);opacity:0}to{transform:none;opacity:1}}
+.tile .h{background:var(--tc);color:#fff;font-size:12px;font-weight:700;padding:4px}
+.tile .v{font-size:22px;font-weight:800;padding:10px 4px;color:var(--tc)}
+canvas.confetti{position:fixed;inset:0;pointer-events:none;z-index:70}
+
+/* checklist nodes */
+.check-list{display:grid;gap:8px;margin:10px 0 16px}
+.chk{display:flex;align-items:center;gap:12px;background:var(--surface);border:2px solid var(--line);border-radius:14px;padding:12px 14px;text-align:left;color:var(--ink);font-size:16px;box-shadow:0 3px 0 var(--line)}
+.chk .box{flex:none;width:26px;height:26px;border-radius:8px;border:2px solid var(--line);display:grid;place-items:center;color:#fff;transition:background .15s, transform .2s}
+.chk.on{border-color:var(--green)}
+.chk .box svg{width:16px;height:16px}
+.chk.on .box{background:var(--green);border-color:var(--green);transform:scale(1.1)}
+.chk.on .lbl{text-decoration:line-through;color:var(--muted)}
+
+/* ---------- mentor chat ---------- */
+.fab{position:fixed;right:18px;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:40;display:flex;align-items:center;gap:8px;background:var(--blue);color:#fff;border:0;border-radius:18px;padding:12px 18px 12px 12px;font-weight:700;font-size:16px;box-shadow:0 4px 0 #2A68CC}
+.fab:active{transform:translateY(4px);box-shadow:none}
+.fab svg{width:30px;height:30px}
+.drawer{position:fixed;z-index:80;right:0;top:0;bottom:0;width:min(440px,100%);background:var(--surface);border-left:2px solid var(--line);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);transform:translateX(105%);transition:transform .3s cubic-bezier(.2,.9,.3,1);box-shadow:-10px 0 30px rgba(0,0,0,.12)}
+.drawer.open{transform:none}
+.dr-head{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:2px solid var(--line)}
+.dr-head .av{width:40px;height:40px}
+.dr-head .t{font-weight:800}
+.dr-head .s{font-size:13px;color:var(--muted)}
+.dr-msgs{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.msg{max-width:92%;padding:10px 14px;border-radius:16px;font-size:15px;animation:msgin .2s ease-out;overflow-wrap:anywhere}
+@keyframes msgin{from{transform:translateY(8px);opacity:0}to{transform:none;opacity:1}}
+.msg.u{align-self:flex-end;background:var(--blue);color:#fff;border-bottom-right-radius:6px;white-space:pre-wrap}
+.msg.a{align-self:flex-start;background:var(--surface-2);border:2px solid var(--line);border-bottom-left-radius:6px}
+.msg.a pre{font-size:12.5px}
+.msg.err{border-color:var(--red)}
+.chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 10px}
+.chip{background:var(--surface-2);border:2px solid var(--line);color:var(--ink);border-radius:99px;padding:6px 12px;font-size:14px;font-weight:600}
+.dr-input{display:flex;gap:8px;padding:12px 16px;border-top:2px solid var(--line)}
+.dr-input textarea{flex:1;resize:none;height:48px;max-height:140px;background:var(--surface-2);color:var(--ink);border:2px solid var(--line);border-radius:14px;padding:11px 12px;font-family:var(--font);font-size:15px}
+.dr-input .btn{padding:0 16px}
+.scrim{position:fixed;inset:0;z-index:75;background:rgba(10,14,30,.35);opacity:0;pointer-events:none;transition:opacity .25s}
+.scrim.on{opacity:1;pointer-events:auto}
+.toast{position:fixed;left:50%;bottom:calc(90px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:90;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:600;font-size:15px;animation:msgin .2s}
+.xp-float{position:fixed;z-index:95;font-weight:800;color:var(--banana-deep);font-size:22px;pointer-events:none;animation:floatup 1s ease-out forwards}
+@keyframes floatup{from{transform:translateY(0);opacity:1}to{transform:translateY(-60px);opacity:0}}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{animation-duration:.001ms !important;animation-iteration-count:1 !important;transition-duration:.001ms !important}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="topbar-in">
+    <div class="brand"><span id="brandMascot"></span><span>Путь к банану</span></div>
+    <div class="stat streak off" id="stStreak" title="Дней подряд"><span class="ic">🔥</span><span id="stStreakV">0</span></div>
+    <div class="stat bananas" title="Бананы"><span class="ic">🍌</span><span id="stBananas">0</span></div>
+    <div class="stat" title="Опыт"><span class="ic">⚡</span><span id="stXp">0</span></div>
+    <button class="iconbtn" id="soundBtn" aria-label="Звук">🔊</button>
+    <button class="iconbtn" id="themeBtn" aria-label="Тема">🌙</button>
+  </div>
+</header>
+
+<main class="layout">
+  <section id="pathRoot" aria-label="Роадмап"></section>
+  <aside class="side">
+    <div class="panel">
+      <h3>Цель на сегодня</h3>
+      <div class="goal-row">
+        <svg class="ring" viewBox="0 0 64 64"><circle class="bgc" cx="32" cy="32" r="26"/><circle class="fg" id="goalRing" cx="32" cy="32" r="26" transform="rotate(-90 32 32)" stroke-dasharray="163.4" stroke-dashoffset="163.4"/></svg>
+        <div><div style="font-weight:800;font-size:20px"><span id="goalXp">0</span> / <span id="goalMax">30</span> XP</div><div class="muted small" id="goalText">Пройди урок, чтобы начать серию</div></div>
+      </div>
+    </div>
+    <div class="panel">
+      <h3>Общий прогресс</h3>
+      <div class="bar" style="margin:6px 0 8px"><i id="totalBar" style="width:0"></i></div>
+      <div class="muted small" id="totalText"></div>
+    </div>
+    <div class="panel hide-m">
+      <h3>LeetCode (параллельно)</h3>
+      <div class="leet">
+        <div>Easy <span class="muted small">цель 25</span></div>
+        <div class="counter"><button data-leet="easy" data-d="-1" aria-label="Минус easy">−</button><span id="leetEasy">0</span><button data-leet="easy" data-d="1" aria-label="Плюс easy">+</button></div>
+        <div>Medium <span class="muted small">цель 15</span></div>
+        <div class="counter"><button data-leet="medium" data-d="-1" aria-label="Минус medium">−</button><span id="leetMed">0</span><button data-leet="medium" data-d="1" aria-label="Плюс medium">+</button></div>
+      </div>
+      <p class="muted small" style="margin:10px 0 0">2–3 задачи в неделю с 4-й недели. Английский качаешь через мок-интервью в блоке «Штурм рынка».</p>
+    </div>
+    <div class="panel hide-m">
+      <h3>Как тут учиться</h3>
+      <p class="small" style="margin:0 0 8px">Каждый урок ментор собирает под тебя: теория, задачи, в конце код, который он проверяет. Ошибся — вопрос вернётся в конце урока.</p>
+      <p class="small muted" style="margin:0">Сначала сам бьёшься над задачей, потом зовёшь ментора.</p>
+      <p style="margin:10px 0 0"><button class="linkbtn" id="resetBtn">Сбросить прогресс</button></p>
+    </div>
+    <p class="muted small" id="syncNote" style="margin:0 4px"></p>
+  </aside>
+</main>
+
+<button class="fab" id="fab"><span id="fabMascot"></span>Спросить ментора</button>
+<div class="scrim" id="scrim"></div>
+<aside class="drawer" id="drawer" aria-label="Чат с ментором">
+  <div class="dr-head">
+    <div class="av" id="drAv"></div>
+    <div style="flex:1;min-width:0"><div class="t">AI-ментор</div><div class="s" id="drCtx">Контекст: общий</div></div>
+    <button class="iconbtn" id="drClear" aria-label="Очистить чат" title="Новый чат">↺</button>
+    <button class="iconbtn" id="drClose" aria-label="Закрыть">✕</button>
+  </div>
+  <div class="dr-msgs" id="drMsgs"></div>
+  <div class="chips" id="drChips"></div>
+  <div class="dr-input">
+    <textarea id="drText" placeholder="Спроси что угодно по теме…" rows="1"></textarea>
+    <button class="btn blue" id="drSend">➤</button>
+  </div>
+</aside>
+
+<script>
+/* =============================== DATA: ROADMAP =============================== */
+const UNITS = [
+  { id:"fund", title:"Фундамент", weeks:"Недели 1–3", color:"#3E8BFF", deep:"#2A68CC",
+    nodes:[
+      {id:"ts-basic", title:"Базовые типы TS", outline:["примитивы, массивы, кортежи","any vs unknown","литеральные типы"]},
+      {id:"ts-interface", title:"interface и type", outline:["зачем нужен interface","опциональные и readonly поля","type vs interface","расширение и пересечение"]},
+      {id:"ts-functions", title:"Типизация функций", outline:["типы параметров и возвращаемого значения","опциональные и дефолтные параметры","тип функции: type Fn = (x: T) => R","контекстная типизация","void и never"]},
+      {id:"ts-narrowing", title:"Union и narrowing", outline:["union types","typeof, in, instanceof","discriminated unions","собственные type guards"]},
+      {id:"ts-generics", title:"Дженерики", outline:["generic-функции","ограничения через extends","generic-интерфейсы","keyof и доступ по ключу"]},
+      {id:"ts-utility", title:"Utility types", outline:["Partial, Required, Readonly","Pick, Omit, Record","ReturnType, Parameters, Awaited"]},
+      {id:"ts-node", title:"TS в Node-проекте", outline:["tsconfig: главное","ESM vs CommonJS","module node16 и .js в импортах","сборка и запуск (tsc, tsx)"]},
+      {id:"node-loop", title:"Event loop", outline:["call stack и очереди","микро- и макрозадачи","process.nextTick и setImmediate","как не блокировать event loop"]},
+      {id:"node-async", title:"Промисы и async/await под капотом", outline:["состояния промиса","Promise.all, allSettled, race","обработка ошибок в async","параллельно vs последовательно"]},
+      {id:"node-streams", title:"Streams", outline:["Readable, Writable, Transform","pipeline","backpressure","обработка больших файлов"]},
+      {id:"pg-sql", title:"PostgreSQL: запросы и JOIN", outline:["SELECT, WHERE, GROUP BY","INNER, LEFT JOIN","подзапросы","схема таблиц и связи"]},
+      {id:"pg-index", title:"Индексы и EXPLAIN ANALYZE", outline:["B-tree индекс","когда индекс не работает","составные индексы","читаем EXPLAIN ANALYZE"]},
+      {id:"pg-tx", title:"Транзакции", outline:["BEGIN, COMMIT, ROLLBACK","ACID","уровни изоляции","блокировки и гонки"]},
+      {id:"git-team", title:"Git по-командному", outline:["ветки и pull request","rebase vs merge","cherry-pick","разрешение конфликтов"]},
+      {id:"fund-check", title:"Проверка блока «Фундамент»", kind:"checkpoint"}
+    ]},
+  { id:"frame", title:"Фреймворк и архитектура", weeks:"Недели 4–6", color:"#E0234E", deep:"#A8173A",
+    nodes:[
+      {id:"nest-basics", title:"NestJS: модули, контроллеры, провайдеры", outline:["структура проекта","модули","контроллеры и роуты","провайдеры и сервисы"]},
+      {id:"nest-di", title:"Dependency Injection", outline:["что такое DI","@Injectable","scope провайдеров","зачем это для тестов"]},
+      {id:"rest-right", title:"REST правильно", outline:["ресурсы и HTTP-методы","статус-коды","версионирование API","пагинация и фильтры"]},
+      {id:"nest-valid", title:"Валидация и ошибки", outline:["DTO и class-validator","ValidationPipe","exception filters","единый формат ошибок"]},
+      {id:"nest-db", title:"NestJS + PostgreSQL", outline:["ORM: Prisma или TypeORM","миграции","связи между сущностями","репозитории"]},
+      {id:"auth-jwt", title:"JWT + refresh tokens", outline:["access и refresh","где хранить токены","ротация refresh","logout"]},
+      {id:"auth-roles", title:"Роли и guards", outline:["AuthGuard","RolesGuard","кастомные декораторы","владение ресурсом"]},
+      {id:"jest-unit", title:"Jest: unit-тесты", outline:["describe, it, expect","моки и шпионы","тест сервиса в Nest","покрытие"]},
+      {id:"jest-e2e", title:"Jest: e2e-тесты", outline:["supertest","тестовая база","подготовка и очистка данных"]},
+      {id:"frame-check", title:"Проверка блока «Фреймворк»", kind:"checkpoint"}
+    ]},
+  { id:"ai", title:"AI-интеграции", weeks:"Новый блок, после NestJS и PostgreSQL", color:"#8B5CF6", deep:"#6A3FD1",
+    nodes:[
+      {id:"ai-api", title:"LLM API из Node", outline:["SDK OpenAI и Anthropic","messages, роли, параметры","ключи в .env, лимиты, стоимость"]},
+      {id:"ai-stream", title:"Стриминг ответов", outline:["как работает стриминг","SSE в NestJS/Express","отмена запроса"]},
+      {id:"ai-json", title:"Промпты и structured output", outline:["системный промпт","JSON-ответы","валидация через zod","ретраи и ошибки"]},
+      {id:"ai-embed", title:"Эмбеддинги и pgvector", outline:["что такое эмбеддинг","pgvector в PostgreSQL","поиск по сходству","чанкинг текста"]},
+      {id:"ai-rag", title:"RAG", outline:["схема RAG","загрузка и индексация документов","сборка контекста","ответ со ссылками на источники"]},
+      {id:"ai-tools", title:"Tool use и агенты", outline:["что такое tool use","описание инструментов","цикл агента","ограничения и безопасность"]},
+      {id:"ai-bot", title:"AI в Telegram-боте", outline:["grammY + LLM","история диалога","лимиты на пользователя","очереди для долгих запросов"]},
+      {id:"ai-check", title:"Проверка блока «AI»", kind:"checkpoint"}
+    ]},
+  { id:"middle", title:"То, что делает мидлом", weeks:"Недели 7–9", color:"#F97316", deep:"#C2560B",
+    nodes:[
+      {id:"redis-cache", title:"Redis: кэш", outline:["типы данных Redis","cache-aside","TTL и инвалидация"]},
+      {id:"redis-rate", title:"Сессии и rate limiting", outline:["сессии в Redis","fixed window и sliding window","rate limit в NestJS"]},
+      {id:"bull-queue", title:"BullMQ: очереди", outline:["зачем очереди","producer и worker","ретраи и backoff"]},
+      {id:"bull-jobs", title:"Фоновые задачи: email и файлы", outline:["отправка email через очередь","обработка файлов","статусы задач"]},
+      {id:"docker-basic", title:"Docker", outline:["образ и контейнер","Dockerfile для Node","multi-stage build",".dockerignore"]},
+      {id:"docker-compose", title:"docker-compose", outline:["сервисы: api, postgres, redis","volumes и сети","env-переменные"]},
+      {id:"deploy", title:"Деплой: VPS и Railway", outline:["деплой на Railway","VPS: nginx и pm2 или docker","домен и HTTPS"]},
+      {id:"cicd", title:"CI/CD на GitHub Actions", outline:["workflow: lint, test, build","секреты","автодеплой","бейдж в README"]},
+      {id:"middle-check", title:"Проверка блока «Мидл»", kind:"checkpoint"}
+    ]},
+  { id:"projects", title:"Проекты в портфолио", weeks:"С 4-й недели, параллельно", color:"#22A559", deep:"#177A40", parallel:true,
+    nodes:[
+      {id:"proj-1", title:"Проект 1: клон сервиса", kind:"project", checks:["NestJS + PostgreSQL","JWT + роли","Unit и e2e тесты","AI-фича (например, RAG-чат по документам)","Задеплоен","README на английском","Схема архитектуры","CI-бейдж"]},
+      {id:"proj-2", title:"Проект 2: сервис с интеграциями", kind:"project", checks:["Stripe (test mode)","Email через очереди","Загрузка файлов в S3","AI-фича","Задеплоен","README на английском","Схема архитектуры","CI-бейдж"]},
+      {id:"proj-3", title:"Проект 3: реалтайм и нагрузка", kind:"project", checks:["WebSocket-чат или API с кэшем","Rate limiting","Нагрузочный тест k6","Задеплоен","README на английском","Схема архитектуры","CI-бейдж"]}
+    ]},
+  { id:"market", title:"Штурм рынка", weeks:"Недели 10–16", color:"#E3A008", deep:"#A87400",
+    nodes:[
+      {id:"cv", title:"Резюме на английском", kind:"career", checks:["1 страница","Цифры и результаты в каждом пункте","Ссылки на 3 проекта","Проверено ментором"], ask:"Проверь моё резюме на английском для позиции Node.js developer (удалёнка). Вот текст:"},
+      {id:"profiles", title:"LinkedIn и GitHub", kind:"career", checks:["LinkedIn заполнен на 100%","Open to Work","3 закреплённых проекта на GitHub","Регулярная активность"], ask:"Помоги написать headline и About для LinkedIn (Node.js/TypeScript backend, открыт к удалёнке). Вот что у меня есть:"},
+      {id:"platforms", title:"Биржи и площадки", kind:"career", checks:["Upwork","Kwork","Djinni","Wellfound","RemoteOK","We Work Remotely"], ask:"Помоги написать описание профиля для Upwork (Node.js/TypeScript, Telegram-боты, AI-интеграции). Вот мой опыт:"},
+      {id:"apply", title:"Отклики каждую неделю", kind:"career", checks:["Неделя 10: 25+ откликов","Неделя 11: 25+ откликов","Неделя 12: 25+ откликов","Неделя 13: 30+ откликов","Неделя 14: 30+ откликов","Неделя 15: 30+ откликов","Неделя 16: 30+ откликов"], ask:"Помоги написать cover letter на английском под эту вакансию:"},
+      {id:"interview-q", title:"Топ-50 вопросов по Node.js", outline:["event loop и асинхронность","TypeScript","базы данных и индексы","безопасность API","отвечаем на английском"], english:true},
+      {id:"sysdesign", title:"System design: основы", outline:["URL shortener","чат","кэш, очереди, масштабирование"]},
+      {id:"mock", title:"Мок-интервью на английском", kind:"career", checks:["Мок №1","Мок №2","Мок №3"], ask:"Проведи со мной мок-интервью на английском на позицию Junior+/Middle Node.js developer. Задавай по одному вопросу, после моего ответа давай короткий фидбек и следующий вопрос. Начинай."},
+      {id:"market-check", title:"Финальная проверка", kind:"checkpoint"}
+    ]}
+];
+const ALL = []; UNITS.forEach(u => u.nodes.forEach(n => { n.unit = u; ALL.push(n); }));
+const byId = id => ALL.find(n => n.id === id);
+const MAIN_CHAIN = ["fund","frame","ai","middle","market"];
+
+/* =============================== STATE =============================== */
+const DEFAULT_STATE = () => ({ v:1, done:{"ts-basic":{xp:0,at:0},"ts-interface":{xp:0,at:0}}, xp:0, bananas:0, streak:0, lastDay:null, today:{day:null,xp:0}, checks:{}, leet:{easy:0,medium:0}, sound:true, dailyGoal:30 });
+let S = DEFAULT_STATE();
+const LS_KEY = "banana-path-v1";
+let dbDoc = null;
+try { const raw = localStorage.getItem(LS_KEY); if (raw) S = Object.assign(DEFAULT_STATE(), JSON.parse(raw)); } catch(e) {}
+
+let saveTimer = null;
+function save(){
+  try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch(e) {}
+  if (dbDoc){ clearTimeout(saveTimer); saveTimer = setTimeout(() => { dbDoc.set(JSON.parse(JSON.stringify(S))).catch(() => {}); }, 600); }
+}
+function dayStr(d = new Date()){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function yesterdayStr(){ const d = new Date(); d.setDate(d.getDate()-1); return dayStr(d); }
+function liveStreak(){ return (S.lastDay === dayStr() || S.lastDay === yesterdayStr()) ? S.streak : 0; }
+function todayXp(){ return S.today && S.today.day === dayStr() ? S.today.xp : 0; }
+function award(xp, bananas){
+  const t = dayStr();
+  if (S.lastDay !== t){ S.streak = (S.lastDay === yesterdayStr()) ? S.streak + 1 : 1; S.lastDay = t; }
+  if (!S.today || S.today.day !== t) S.today = { day:t, xp:0 };
+  S.today.xp += xp; S.xp += xp; S.bananas += bananas;
+  save();
+}
+
+/* =============================== CAPABILITIES =============================== */
+let sampleFn = null, sampleState = "pending";
+const hasClaude = !!(window.claude && typeof window.claude.use === "function");
+if (hasClaude){
+  window.claude.use("sample").then(s => { sampleFn = s; sampleState = s ? "ok" : "none"; }).catch(() => { sampleState = "none"; });
+  (async () => {
+    try {
+      const [db, user] = await Promise.all([window.claude.use("db"), window.claude.use("user")]);
+      if (!db || !user) { note("Прогресс хранится в этом браузере."); return; }
+      const uid = await user.id();
+      if (!uid) { note("Прогресс хранится в этом браузере."); return; }
+      dbDoc = db.doc("data/users/" + uid + "/progress");
+      const snap = await dbDoc.get();
+      if (snap.exists){
+        const remote = snap.data();
+        if ((remote.xp || 0) >= (S.xp || 0)) { S = Object.assign(DEFAULT_STATE(), JSON.parse(JSON.stringify(remote))); try { localStorage.setItem(LS_KEY, JSON.stringify(S)); } catch(e) {} renderAll(); }
+        else save();
+      } else save();
+      note("Прогресс синхронизирован с твоим аккаунтом.");
+    } catch(e){ note("Прогресс хранится в этом браузере."); }
+  })();
+} else { sampleState = "none"; note("Прогресс хранится в этом браузере."); }
+function note(t){ document.getElementById("syncNote").textContent = t; }
+async function getSample(){
+  if (sampleState === "pending" && hasClaude){ sampleFn = await window.claude.use("sample"); sampleState = sampleFn ? "ok" : "none"; }
+  return sampleFn;
+}
+const ERR_COPY = {
+  not_granted:"Ты не разрешил ментору работать на этой странице. Перезагрузи страницу, чтобы разрешить.",
+  sampling_disabled:"AI-ментор недоступен для этого аккаунта.",
+  rate_limited:"Слишком много запросов или закончился лимит. Попробуй чуть позже.",
+  session_expired:"Сессия истекла, войди в аккаунт заново.",
+  invalid_json:"Ментор ответил в неверном формате. Попробуй ещё раз.",
+  refused:"Ментор не стал отвечать на этот запрос. Переформулируй.",
+  prompt_too_large:"Слишком длинный текст. Сократи и отправь снова.",
+  upstream_error:"Связь прервалась. Попробуй ещё раз."
+};
+const errText = e => (e && ERR_COPY[e.code]) || "Что-то пошло не так. Попробуй ещё раз.";
+
+/* =============================== SOUND =============================== */
+let actx = null;
+function tone(freqs, dur = .12, type = "sine", gap = .09){
+  if (!S.sound) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    freqs.forEach((f, i) => {
+      const o = actx.createOscillator(), g = actx.createGain(); const t = actx.currentTime + i*gap;
+      o.type = type; o.frequency.value = f; g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.18, t+.02); g.gain.exponentialRampToValueAtTime(.0001, t+dur);
+      o.connect(g).connect(actx.destination); o.start(t); o.stop(t+dur+.02);
+    });
+  } catch(e) {}
+}
+const sfx = { ok:() => tone([660, 990], .16, "triangle"), bad:() => tone([220, 170], .2, "sawtooth", .12), win:() => tone([523, 659, 784, 1047], .18, "triangle", .11), tap:() => tone([520], .05, "sine") };
+
+/* =============================== ICONS / MASCOT =============================== */
+function mascot(mood = "happy"){
+  const mouth = mood === "wow" ? '<ellipse cx="50" cy="47" rx="4" ry="5" fill="#5A3A00"/>' : mood === "sad" ? '<path d="M44 50 Q50 45 56 50" stroke="#5A3A00" stroke-width="2.6" fill="none" stroke-linecap="round"/>' : '<path d="M43 46 Q50 53 57 45" stroke="#5A3A00" stroke-width="2.6" fill="none" stroke-linecap="round"/>';
+  return `<svg viewBox="0 0 90 90" aria-hidden="true">
+    <path d="M14 64 C28 80 66 76 78 42 C81 32 78 21 72 15 C69 27 62 48 46 56 C36 61 24 60 14 64 Z" fill="#FFD23F" stroke="#C99200" stroke-width="3" stroke-linejoin="round"/>
+    <path d="M24 66 C40 70 62 62 72 38" stroke="#F2B705" stroke-width="3" fill="none" stroke-linecap="round" opacity=".7"/>
+    <path d="M70 16 L76 6" stroke="#6B4F1D" stroke-width="5" stroke-linecap="round"/>
+    <circle cx="14.5" cy="64" r="2.6" fill="#6B4F1D"/>
+    <circle cx="44" cy="37" r="6.5" fill="#fff" stroke="#5A3A00" stroke-width="1.6"/><circle cx="58" cy="31" r="6.5" fill="#fff" stroke="#5A3A00" stroke-width="1.6"/>
+    <circle cx="45.5" cy="38" r="3" fill="#1B2140"/><circle cx="59.5" cy="32" r="3" fill="#1B2140"/>
+    <circle cx="46.5" cy="37" r="1" fill="#fff"/><circle cx="60.5" cy="31" r="1" fill="#fff"/>
+    ${mouth}
+    <ellipse cx="37" cy="46" rx="3.5" ry="2.2" fill="#FF9E7A" opacity=".6"/><ellipse cx="63" cy="40" rx="3.5" ry="2.2" fill="#FF9E7A" opacity=".6"/>
+  </svg>`;
+}
+const IC = {
+  star:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2.8l2.8 5.9 6.4.8-4.7 4.4 1.2 6.3L12 17.1 6.3 20.2l1.2-6.3L2.8 9.5l6.4-.8z"/></svg>',
+  code:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 7l-5 5 5 5M16 7l5 5-5 5"/></svg>',
+  trophy:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 14.9V18h3v3H8v-3h3v-3.1A5 5 0 0 1 8.3 12H8a4 4 0 0 1-4-4V5h3V3zm0 4H6v1a2 2 0 0 0 1 1.7V7zm10 0v2.7A2 2 0 0 0 18 8V7h-1z"/></svg>',
+  brief:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M9 3h6a2 2 0 0 1 2 2v1h3a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3V5a2 2 0 0 1 2-2zm0 3h6V5H9v1zm-7 6v2h20v-2H2z"/></svg>',
+  check:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>',
+  lock:'<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h1zm2 0h6V8a3 3 0 0 0-6 0v2z"/></svg>'
+};
+const nodeIcon = n => n.kind === "checkpoint" ? IC.trophy : n.kind === "project" ? IC.code : n.kind === "career" ? IC.brief : IC.star;
+
+/* =============================== TEXT HELPERS =============================== */
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+function hl(code){
+  const re = /(\/\/[^\n]*|\/\*[\s\S]*?\*\/|--[^\n]*)|(`(?:\\[\s\S]|[^`\\])*`|'(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*")|\b(const|let|var|function|return|if|else|for|while|type|interface|extends|implements|class|new|import|from|export|default|async|await|try|catch|finally|throw|of|in|as|keyof|typeof|readonly|public|private|protected|void|null|undefined|true|false|number|string|boolean|any|unknown|never|enum|this|super|SELECT|FROM|WHERE|JOIN|LEFT|INNER|ON|GROUP|BY|ORDER|INSERT|INTO|VALUES|UPDATE|SET|DELETE|CREATE|TABLE|INDEX|BEGIN|COMMIT|ROLLBACK)\b|\b(\d+(?:\.\d+)?)\b/g;
+  let out = "", last = 0, m;
+  while ((m = re.exec(code))){
+    out += esc(code.slice(last, m.index));
+    const cls = m[1] ? "c" : m[2] ? "s" : m[3] ? "k" : "n";
+    out += `<span class="tk-${cls}">${esc(m[0])}</span>`;
+    last = re.lastIndex;
+  }
+  return out + esc(code.slice(last));
+}
+function inline(s){
+  return esc(s).replace(/`([^`]+)`/g, "<code>$1</code>").replace(/\*\*([^*]+)\*\*/g, "<b>$1</b>");
+}
+function md(text){
+  const parts = String(text || "").split(/```[a-zA-Z]*\n?/);
+  let html = "";
+  parts.forEach((p, i) => {
+    if (i % 2 === 1){ html += `<pre><code>${hl(p.replace(/\n$/, ""))}</code></pre>`; return; }
+    const lines = p.split("\n"); let inList = false, para = [];
+    const flush = () => { if (para.length){ html += `<p>${para.map(inline).join("<br>")}</p>`; para = []; } };
+    lines.forEach(l => {
+      const li = l.match(/^\s*(?:[-*•]|\d+[.)])\s+(.*)/);
+      const hd = l.match(/^\s*#{1,4}\s+(.*)/);
+      if (li){ flush(); if (!inList){ html += "<ul>"; inList = true; } html += `<li>${inline(li[1])}</li>`; }
+      else { if (inList){ html += "</ul>"; inList = false; }
+        if (hd){ flush(); html += `<p><b>${inline(hd[1])}</b></p>`; }
+        else if (!l.trim()) flush(); else para.push(l); }
+    });
+    if (inList) html += "</ul>"; flush();
+  });
+  return html;
+}
+function toast(t){ const el = document.createElement("div"); el.className = "toast"; el.textContent = t; document.body.appendChild(el); setTimeout(() => el.remove(), 2600); }
+
+/* =============================== PROGRESS LOGIC =============================== */
+const isDone = n => !!S.done[n.id] || (n.kind && n.checks && (S.checks[n.id] || []).filter(Boolean).length === n.checks.length && !!S.done[n.id]);
+const unitDone = u => u.nodes.filter(n => S.done[n.id]).length;
+function unitUnlocked(u){
+  if (u.id === "fund") return true;
+  if (u.id === "projects") return unitDone(UNITS[1]) > 0 || !!S.done["fund-check"];
+  if (u.id === "market") return !!S.done["middle-check"] || unitDone(UNITS[3]) === UNITS[3].nodes.length;
+  const idx = UNITS.indexOf(u); const prev = UNITS[idx-1];
+  return unitDone(prev) === prev.nodes.length;
+}
+function firstOpen(u){ return u.nodes.find(n => !S.done[n.id]); }
+function nodeStatus(n){
+  if (S.done[n.id]) return "done";
+  const u = n.unit;
+  if (!unitUnlocked(u)) return "locked";
+  if (u.parallel) return "open";
+  return firstOpen(u) === n ? "open" : "locked";
+}
+function globalCurrent(){
+  for (const uid of MAIN_CHAIN){ const u = UNITS.find(x => x.id === uid); if (!unitUnlocked(u)) continue; const n = firstOpen(u); if (n) return n; }
+  return null;
+}
+
+/* =============================== RENDER: PATH =============================== */
+const OFFS = [0, 48, 78, 48, 0, -48, -78, -48];
+let openPopId = null;
+function renderPath(){
+  const root = document.getElementById("pathRoot");
+  const cur = globalCurrent();
+  let html = "";
+  UNITS.forEach((u) => {
+    const dn = unitDone(u), unlocked = unitUnlocked(u);
+    html += `<div class="unit ${unlocked ? "" : "locked-unit"}" style="--uc:${u.color};--ud:${u.deep}" id="unit-${u.id}">
+      <div class="unit-banner"><div class="grow"><div class="w">${esc(u.weeks)}</div><div class="t">${esc(u.title)}</div></div><div class="prog">${dn} / ${u.nodes.length}</div></div>
+      <div class="path">`;
+    u.nodes.forEach((n, i) => {
+      const st = nodeStatus(n), off = OFFS[i % OFFS.length];
+      const isCur = cur && cur.id === n.id;
+      const cls = ["node", st === "locked" ? "locked" : "", st === "done" ? "done" : "", isCur ? "current" : "", (!isCur && st === "open") ? "open-soft" : "", n.kind === "checkpoint" ? "checkpoint" : ""].join(" ");
+      const icon = st === "locked" ? IC.lock : nodeIcon(n);
+      const mascotSide = isCur ? `<div class="mascot-side" style="${off >= 0 ? "right:calc(100% + 30px)" : "left:calc(100% + 30px)"}">${mascot()}</div>` : "";
+      html += `<div class="row${openPopId === n.id ? " has-pop" : ""}"><div class="node-wrap" style="transform:translateX(${off}px)">
+        ${isCur ? `<div class="start-bubble">${S.done[n.id] ? "" : "Старт"}</div>` : ""}
+        ${mascotSide}
+        <button class="${cls}" data-node="${n.id}" aria-label="${esc(n.title)}">${icon}${st === "done" ? `<span class="badge">${IC.check}</span>` : ""}</button>
+        <div class="node-label">${esc(n.title)}</div>
+        ${openPopId === n.id ? popHtml(n, st) : ""}
+      </div></div>`;
+    });
+    html += `</div></div>`;
+  });
+  root.innerHTML = html;
+}
+function popHtml(n, st){
+  const u = n.unit;
+  let meta = "", body = "", btn = "";
+  if (n.kind === "project" || n.kind === "career"){
+    const c = (S.checks[n.id] || []).filter(Boolean).length;
+    meta = `${c} из ${n.checks.length} пунктов`;
+    btn = `<button class="btn" data-act="open" data-id="${n.id}">${st === "done" ? "Открыть" : "Открыть чек-лист"}</button>`;
+  } else if (n.kind === "checkpoint"){
+    meta = "Задачи по всему блоку, без теории";
+    btn = st === "locked" ? `<button class="btn" disabled>Пройди уроки блока</button><button class="alt" data-act="start" data-id="${n.id}">Всё равно пройти</button>` : `<button class="btn" data-act="start" data-id="${n.id}">${st === "done" ? "Пройти снова" : "Пройти проверку, +40 XP"}</button>`;
+  } else {
+    body = `<ul>${n.outline.map(o => `<li>${esc(o)}</li>`).join("")}</ul>`;
+    btn = st === "locked"
+      ? `<button class="btn" disabled>Сначала предыдущие уроки</button><button class="alt" data-act="start" data-id="${n.id}">Всё равно начать</button>`
+      : `<button class="btn" data-act="start" data-id="${n.id}">${st === "done" ? "Повторить урок" : "Начать урок, +20 XP"}</button>`;
+  }
+  return `<div class="pop" role="dialog"><div class="meta">${esc(u.title)}</div><h4>${esc(n.title)}</h4>${meta ? `<div class="meta">${esc(meta)}</div>` : ""}${body}${btn}</div>`;
+}
+function renderStats(){
+  const st = liveStreak();
+  document.getElementById("stStreakV").textContent = st;
+  document.getElementById("stStreak").className = "stat streak " + (S.lastDay === dayStr() ? "on" : "off");
+  document.getElementById("stBananas").textContent = S.bananas;
+  document.getElementById("stXp").textContent = S.xp;
+  const tx = todayXp(), goal = S.dailyGoal || 30;
+  document.getElementById("goalXp").textContent = tx;
+  document.getElementById("goalMax").textContent = goal;
+  document.getElementById("goalRing").style.strokeDashoffset = 163.4 * (1 - Math.min(1, tx/goal));
+  document.getElementById("goalText").textContent = tx >= goal ? "Цель выполнена. Красавчик." : st ? `Серия ${st} дн. Не прерывай её.` : "Пройди урок, чтобы начать серию";
+  const total = ALL.length, done = ALL.filter(n => S.done[n.id]).length;
+  document.getElementById("totalBar").style.width = (done/total*100) + "%";
+  document.getElementById("totalText").textContent = `${done} из ${total} шагов роадмапа`;
+  document.getElementById("leetEasy").textContent = S.leet.easy;
+  document.getElementById("leetMed").textContent = S.leet.medium;
+  document.getElementById("soundBtn").textContent = S.sound ? "🔊" : "🔇";
+}
+function renderAll(){ renderPath(); renderStats(); }
+
+document.getElementById("pathRoot").addEventListener("click", e => {
+  const act = e.target.closest("[data-act]");
+  if (act){ const n = byId(act.dataset.id); openPopId = null; renderPath();
+    if (act.dataset.act === "open") openChecklist(n); else startLesson(n); return; }
+  const b = e.target.closest("[data-node]");
+  if (b){ sfx.tap(); openPopId = openPopId === b.dataset.node ? null : b.dataset.node; renderPath(); return; }
+  if (!e.target.closest(".pop") && openPopId){ openPopId = null; renderPath(); }
+});
+document.addEventListener("keydown", e => { if (e.key === "Escape" && openPopId){ openPopId = null; renderPath(); } });
+
+/* =============================== LESSON ENGINE =============================== */
+const MENTOR_CTX = "Ученик — Умид, full-stack разработчик (~1 год коммерческого опыта: React, Express, MongoDB, JWT, Telegraf). Учит Node.js/TypeScript по роадмапу, чтобы выйти на зарубежную удалёнку и фриланс. Уже знает, зачем нужен interface в TS.";
+function lessonPrompt(n, variant){
+  if (n.kind === "checkpoint"){
+    const topics = n.unit.nodes.filter(x => !x.kind).map(x => x.title + " (" + x.outline.join(", ") + ")").join("; ");
+    return `Ты — строгий, но доброжелательный ментор по Node.js/TypeScript. ${MENTOR_CTX}
+Собери итоговую проверку блока «${n.unit.title}». Темы блока: ${topics}.
+Вариант №${variant}.
+Верни ТОЛЬКО JSON такого вида:
+{"cards":[],"tasks":[{"type":"choice","question":"...","code":"(необязательно)","options":["...","...","...","..."],"answer":0,"explain":"..."},{"type":"code","task":"...","starter":"...","hint":"..."}]}
+Требования: 8 задач type "choice" по разным темам блока (вопросы как на собеседовании, «что выведет код», «найди ошибку», выбор правильного подхода), и последней одна задача type "code" на 10–20 строк, объединяющая 2–3 темы блока.
+В choice ровно 4 варианта, answer — индекс правильного (0–3), правильные ответы распредели по разным позициям. explain — 1–3 предложения, почему так. Тексты по-русски, код и имена — на английском. Поле code — чистый код без markdown-обёрток.`;
+  }
+  return `Ты — строгий, но доброжелательный ментор по Node.js/TypeScript. ${MENTOR_CTX}
+Собери урок в стиле Duolingo по теме «${n.title}» (блок роадмапа «${n.unit.title}»). Что покрыть: ${n.outline.join("; ")}.${n.english ? " Вопросы и объяснения давай на английском, чтобы тренировать язык для интервью." : ""}
+Вариант №${variant}.
+Верни ТОЛЬКО JSON такого вида:
+{"cards":[{"title":"...","text":"...","code":"(необязательно)"}],"tasks":[{"type":"choice","question":"...","code":"(необязательно)","options":["...","...","...","..."],"answer":0,"explain":"..."},{"type":"code","task":"...","starter":"...","hint":"..."}]}
+Требования:
+- cards: 3–4 короткие карточки теории, по одной идее на карточку, text до 500 символов, можно **жирный** и \`код\`, поле code — короткий пример (до 12 строк) без markdown-обёрток.
+- tasks: 5 задач type "choice" (смешай: понимание концепции, «что выведет код / какая будет ошибка TS», «найди ошибку», практический выбор как в реальном проекте), затем 1 задача type "code": практическая мини-задача на 5–15 строк по теме, starter — заготовка кода, hint — подсказка без готового решения.
+- В choice ровно 4 варианта, answer — индекс правильного (0–3), правильные ответы распредели по разным позициям. explain — 1–3 предложения.
+- Тексты по-русски${n.english ? " (кроме вопросов, они на английском)" : ""}, код и имена переменных — на английском. Никакого текста вне JSON.`;
+}
+function validLesson(d){
+  if (!d || typeof d !== "object") return null;
+  const cards = Array.isArray(d.cards) ? d.cards.filter(c => c && c.title && c.text).slice(0, 5) : [];
+  const tasks = (Array.isArray(d.tasks) ? d.tasks : []).filter(t => {
+    if (!t) return false;
+    if (t.type === "choice") return t.question && Array.isArray(t.options) && t.options.length >= 2 && Number.isInteger(Number(t.answer)) && Number(t.answer) >= 0 && Number(t.answer) < t.options.length;
+    if (t.type === "code") return !!t.task;
+    return false;
+  }).map(t => t.type === "choice" ? Object.assign({}, t, {answer:Number(t.answer)}) : t);
+  if (!tasks.length) return null;
+  return { cards, tasks };
+}
+
+let L = null; // lesson runtime
+const TIPS = ["Ошибся — вопрос вернётся в конце урока.", "Непонятно? Жми «Спросить ментора» прямо в уроке.", "Сначала думай сам, потом смотри подсказку.", "Клавиши 1–4 выбирают ответ, Enter проверяет.", "Каждый урок — новые задачи. Можно проходить тему несколько раз.", "Код в конце урока проверяет ментор. Пиши как для продакшена."];
+
+function overlayShell(){
+  closeOverlay();
+  const ov = document.createElement("div"); ov.className = "overlay"; ov.id = "ov";
+  ov.innerHTML = `<div class="ov-head"><button class="x" id="ovX" aria-label="Закрыть урок">✕</button><div class="lbar"><i id="lbar"></i></div><div class="hearts" id="hearts">❤ <span id="heartsV">3</span></div></div>
+    <div class="ov-body"><div class="ov-inner" id="ovBody"></div></div>
+    <div class="ov-foot" id="ovFoot"><div class="ov-foot-in" id="ovFootIn"></div></div>`;
+  document.body.appendChild(ov); document.body.style.overflow = "hidden";
+  document.getElementById("ovX").onclick = () => { if (L && L.ctl) L.ctl.abort(); if (!L || L.phase === "result" || L.phase === "loading" || confirm("Выйти из урока? Прогресс урока не сохранится.")) closeOverlay(); };
+  return ov;
+}
+function closeOverlay(){ const o = document.getElementById("ov"); if (o) o.remove(); document.body.style.overflow = ""; L = null; renderAll(); setChatCtx(null); }
+
+async function startLesson(n, fresh = false){
+  overlayShell();
+  setChatCtx(n);
+  L = { n, phase:"loading", hearts:3, cards:[], queue:[], idx:0, total:0, correctFirst:0, answered:0, started:Date.now(), wrongSet:new Set() };
+  document.getElementById("heartsV").textContent = 3;
+  const body = document.getElementById("ovBody");
+  let ti = Math.floor(Math.random()*TIPS.length);
+  body.innerHTML = `<div class="loading"><div class="m">${mascot("wow")}</div><div style="font-weight:800;font-size:22px">Ментор собирает урок<span class="dots"></span></div><div class="muted tip" id="tip">${TIPS[ti]}</div><div class="muted small" id="elapsed"></div></div>`;
+  setFoot(`<div class="msg muted small">Обычно 20–60 секунд. Первый раз claude.ai спросит разрешение.</div><button class="btn ghost" id="cancelGen">Отмена</button>`);
+  document.getElementById("cancelGen").onclick = () => { if (L && L.ctl) L.ctl.abort(); closeOverlay(); };
+  const tipTimer = setInterval(() => { const el = document.getElementById("tip"); if (!el) return clearInterval(tipTimer); ti = (ti+1) % TIPS.length; el.style.opacity = 0; setTimeout(() => { el.textContent = TIPS[ti]; el.style.opacity = 1; }, 300); const e2 = document.getElementById("elapsed"); if (e2 && L) e2.textContent = Math.round((Date.now()-L.started)/1000) + " сек"; }, 3500);
+
+  const sample = await getSample();
+  if (!sample){ clearInterval(tipTimer); return lessonUnavailable(n, "AI-ментор недоступен в этом просмотре. Открой страницу на claude.ai."); }
+  const variant = fresh ? Math.floor(Math.random()*1000)+2 : ((S.done[n.id] ? (S.done[n.id].runs || 1) : 0) + 1);
+  const ctl = new AbortController(); L.ctl = ctl;
+  try {
+    const data = await sample.json(lessonPrompt(n, variant), { signal: ctl.signal, cache: { gcTime: 86400000 } });
+    clearInterval(tipTimer);
+    if (!L || L.n !== n) return;
+    const lesson = validLesson(data);
+    if (!lesson) return lessonUnavailable(n, "Ментор прислал пустой урок. Попробуй ещё раз.", true);
+    L.cards = lesson.cards; L.queue = lesson.tasks.map((t, i) => Object.assign({ _i:i }, t)); L.total = L.cards.length + L.queue.length; L.variant = variant;
+    L.phase = L.cards.length ? "cards" : "tasks"; L.cardIdx = 0; L.started = Date.now();
+    step();
+  } catch(e){
+    clearInterval(tipTimer);
+    if (e && e.code === "cancelled") return;
+    lessonUnavailable(n, errText(e), true);
+  }
+}
+function lessonUnavailable(n, msg, retry){
+  const body = document.getElementById("ovBody"); if (!body) return;
+  body.innerHTML = `<div class="loading"><div class="m">${mascot("sad")}</div><div style="font-weight:800;font-size:20px">${esc(msg)}</div>
+    ${n.outline ? `<div class="card" style="text-align:left;max-width:460px;width:100%"><b>План темы</b><ul>${n.outline.map(o => `<li>${esc(o)}</li>`).join("")}</ul></div>` : ""}</div>`;
+  setFoot(`<div class="msg"></div>${retry ? `<button class="btn" id="retryGen">Попробовать снова</button>` : ""}<button class="btn ghost" id="closeGen">Закрыть</button>`);
+  const r = document.getElementById("retryGen"); if (r) r.onclick = () => startLesson(n, true);
+  document.getElementById("closeGen").onclick = closeOverlay;
+}
+function setFoot(html, cls = ""){
+  const f = document.getElementById("ovFoot"); if (!f) return;
+  f.className = "ov-foot " + cls; const inn = document.getElementById("ovFootIn"); inn.innerHTML = html; if (cls) inn.classList.add("foot-anim"); else inn.classList.remove("foot-anim");
+}
+function progress(){
+  const doneCount = (L.phase === "cards" ? L.cardIdx : L.cards.length) + L.answered;
+  const pct = Math.min(100, doneCount / Math.max(1, L.total) * 100);
+  const bar = document.getElementById("lbar"); if (bar) bar.style.width = pct + "%";
+}
+function step(){
+  if (!L) return;
+  progress();
+  if (L.phase === "cards"){
+    const c = L.cards[L.cardIdx];
+    L.phase = "cards";
+    document.getElementById("ovBody").innerHTML = `<div class="kicker">Теория, ${L.cardIdx+1} из ${L.cards.length}</div>
+      <div class="card md"><h2>${inline(c.title)}</h2>${md(c.text)}${c.code ? `<pre><code>${hl(String(c.code))}</code></pre>` : ""}</div>`;
+    setFoot(`<div class="msg">${L.cardIdx > 0 ? `<button class="btn ghost" id="prevCard">Назад</button>` : ""}</div><button class="btn" id="nextCard">${L.cardIdx === L.cards.length-1 ? "К задачам" : "Дальше"}</button>`);
+    const pb = document.getElementById("prevCard"); if (pb) pb.onclick = () => { L.cardIdx--; step(); };
+    document.getElementById("nextCard").onclick = () => { sfx.tap(); L.cardIdx++; if (L.cardIdx >= L.cards.length) L.phase = "tasks"; step(); };
+    return;
+  }
+  if (L.phase === "tasks"){
+    const t = L.queue[0];
+    if (!t) return finishLesson();
+    L.sel = null; L.checked = false;
+    if (t.type === "choice") renderChoice(t); else renderCode(t);
+  }
+}
+function renderChoice(t){
+  const again = L.wrongSet.has(t._i);
+  document.getElementById("ovBody").innerHTML = `<div class="kicker">${again ? "Ещё раз, ошибка из этого урока" : "Выбери правильный ответ"}</div>
+    <div class="q">${inline(t.question)}</div>${t.code ? `<pre><code>${hl(String(t.code))}</code></pre>` : ""}
+    <div class="opts" id="opts">${t.options.map((o, i) => `<button class="opt" data-i="${i}"><span class="k">${i+1}</span><span class="ot">${inline(String(o))}</span></button>`).join("")}</div>`;
+  setFoot(`<div class="msg"><button class="btn ghost" id="skipQ">Не знаю</button></div><button class="btn" id="checkBtn" disabled>Проверить</button>`);
+  document.getElementById("opts").onclick = e => { const b = e.target.closest(".opt"); if (!b || L.checked) return; selectOpt(Number(b.dataset.i)); };
+  document.getElementById("checkBtn").onclick = () => checkChoice();
+  document.getElementById("skipQ").onclick = () => { L.sel = -1; checkChoice(); };
+}
+function selectOpt(i){
+  sfx.tap(); L.sel = i;
+  document.querySelectorAll(".opt").forEach(b => b.classList.toggle("sel", Number(b.dataset.i) === i));
+  const cb = document.getElementById("checkBtn"); if (cb) cb.disabled = false;
+}
+function checkChoice(){
+  const t = L.queue[0]; if (L.checked) return; L.checked = true;
+  const ok = L.sel === t.answer;
+  document.querySelectorAll(".opt").forEach(b => { const i = Number(b.dataset.i); b.disabled = true; b.classList.remove("sel"); if (i === t.answer) b.classList.add("right"); else if (i === L.sel) b.classList.add("wrong"); });
+  verdict(ok, t.explain ? md(t.explain) : "", ok ? "" : `Правильно: ${inline(String(t.options[t.answer]))}`, t);
+}
+function renderCode(t){
+  document.getElementById("ovBody").innerHTML = `<div class="kicker">Задача на код, проверяет ментор</div>
+    <div class="q" style="font-size:19px">${inline(t.task)}</div>
+    <textarea class="code" id="codeIn" spellcheck="false" aria-label="Твоё решение">${esc(t.starter || "")}</textarea>
+    ${t.hint ? `<details class="hint"><summary>Подсказка</summary><div class="md" style="margin-top:6px">${md(t.hint)}</div></details>` : ""}
+    <div id="review" class="review"></div>`;
+  const ta = document.getElementById("codeIn");
+  ta.addEventListener("keydown", e => { if (e.key === "Tab"){ e.preventDefault(); const s = ta.selectionStart; ta.setRangeText("  ", s, ta.selectionEnd, "end"); } });
+  setFoot(`<div class="msg"><button class="btn ghost" id="skipCode">Пропустить</button></div><button class="btn" id="checkCode">Проверить код</button>`);
+  document.getElementById("skipCode").onclick = () => { L.checked = true; L.answered++; L.queue.shift(); step(); };
+  document.getElementById("checkCode").onclick = () => checkCode(t);
+}
+async function checkCode(t){
+  const code = document.getElementById("codeIn").value.trim();
+  if (!code || code === (t.starter || "").trim()){ toast("Сначала напиши решение"); return; }
+  const sample = await getSample(); if (!sample){ toast("Ментор недоступен"); return; }
+  setFoot(`<div class="msg muted">Ментор читает твой код<span class="dots"></span></div><button class="btn" disabled>Проверяю</button>`);
+  const ctl = new AbortController(); L.ctl = ctl;
+  try {
+    const r = await sample.json(`Ты — строгий ментор по Node.js/TypeScript. Проверь решение ученика.
+Тема урока: «${L.n.title}».
+Задача: ${t.task}
+Решение ученика:
+${code}
+Верни ТОЛЬКО JSON: {"pass": true|false, "feedback": "2–5 предложений по-русски: что хорошо, что исправить, можно \`код\`", "solution": "эталонное решение, чистый код без markdown"}
+pass=true, если решение корректно решает задачу и нормально типизировано; мелкий стиль не валит. Если pass=false — в feedback объясни главную ошибку.`, { signal: ctl.signal });
+    if (!L) return;
+    const ok = !!r.pass;
+    document.getElementById("review").innerHTML = `<div class="card md">${md(String(r.feedback || ""))}${r.solution ? `<details class="hint"><summary>Эталонное решение</summary><pre><code>${hl(String(r.solution))}</code></pre></details>` : ""}</div>`;
+    L.checked = false;
+    verdict(ok, "", ok ? "Ментор принял решение." : "Разбор выше. Можешь исправить и сдать снова в конце урока.", t, true);
+  } catch(e){
+    if (e && e.code === "cancelled") return;
+    toast(errText(e));
+    setFoot(`<div class="msg"><button class="btn ghost" id="skipCode">Пропустить</button></div><button class="btn" id="checkCode">Проверить код</button>`);
+    document.getElementById("skipCode").onclick = () => { L.answered++; L.queue.shift(); step(); };
+    document.getElementById("checkCode").onclick = () => checkCode(t);
+  }
+}
+function verdict(ok, explainHtml, extra, t, isCode){
+  const first = !L.wrongSet.has(t._i);
+  if (ok){ sfx.ok(); if (first) L.correctFirst++; L.answered++; }
+  else {
+    sfx.bad(); L.hearts--; L.wrongSet.add(t._i);
+    const h = document.getElementById("hearts"); if (h){ document.getElementById("heartsV").textContent = Math.max(0, L.hearts); h.classList.remove("hit"); void h.offsetWidth; h.classList.add("hit"); }
+  }
+  const praise = ["Отлично!", "Верно!", "Точно в цель!", "Так держать!", "Чисто!"];
+  setFoot(`<div class="msg"><div class="verdict">${ok ? "✓ " + praise[Math.floor(Math.random()*praise.length)] : "✕ Не совсем"}</div>
+      ${extra ? `<div class="explain">${extra}</div>` : ""}${explainHtml ? `<div class="explain md">${explainHtml}</div>` : ""}</div>
+      ${!ok ? `<button class="btn ghost" id="whyBtn">Спросить ментора</button>` : ""}
+      <button class="btn ${ok ? "" : "red"}" id="contBtn">Продолжить</button>`, ok ? "ok" : "bad");
+  const wb = document.getElementById("whyBtn");
+  if (wb) wb.onclick = () => {
+    const q = t.type === "choice" ? `Я ошибся в вопросе: "${t.question}"${t.code ? "\nКод:\n" + t.code : ""}\nВарианты: ${t.options.map((o,i)=>`${i+1}) ${o}`).join("; ")}\nЯ выбрал: ${L.sel >= 0 ? t.options[L.sel] : "не знал"}. Правильно: ${t.options[t.answer]}. Объясни подробно, почему, с примером.` : `Разбери мою ошибку в задаче: ${t.task}\nМой код:\n${document.getElementById("codeIn")?.value || ""}`;
+    openChat(q);
+  };
+  document.getElementById("contBtn").onclick = () => {
+    const cur = L.queue.shift();
+    if (!ok) L.queue.push(cur);
+    if (L.hearts <= 0) return failLesson();
+    step();
+  };
+  progress();
+}
+function failLesson(){
+  L.phase = "result";
+  document.getElementById("ovBody").innerHTML = `<div class="result"><div class="m">${mascot("sad")}</div><h2 style="color:var(--red)">Сердечки закончились</h2><p class="muted" style="max-width:420px;margin:0">Это нормально. Разбери ошибки с ментором и пройди урок ещё раз, задачи будут новые.</p></div>`;
+  setFoot(`<div class="msg"></div><button class="btn ghost" id="endBtn">На карту</button><button class="btn" id="againBtn">Пройти заново</button>`);
+  document.getElementById("endBtn").onclick = closeOverlay;
+  document.getElementById("againBtn").onclick = () => startLesson(L.n, true);
+}
+function finishLesson(){
+  const n = L.n; L.phase = "result";
+  const tasksTotal = new Set([...Array(L.total - L.cards.length).keys()]).size;
+  const acc = Math.round(L.correctFirst / Math.max(1, tasksTotal) * 100);
+  const isCp = n.kind === "checkpoint";
+  const firstTime = !S.done[n.id];
+  const xp = (isCp ? 40 : 20) + (acc === 100 ? 5 : 0) + (firstTime ? 0 : -10);
+  const bananas = isCp ? 20 : 5;
+  const secs = Math.round((Date.now() - L.started)/1000);
+  S.done[n.id] = { xp, at: Date.now(), runs: ((S.done[n.id] && S.done[n.id].runs) || 0) + 1, acc };
+  award(Math.max(5, xp), bananas);
+  document.getElementById("lbar").style.width = "100%";
+  sfx.win(); confetti(n.unit.color);
+  document.getElementById("ovBody").innerHTML = `<div class="result"><div class="m">${mascot()}</div>
+    <h2>${isCp ? "Блок пройден!" : acc === 100 ? "Идеальный урок!" : "Урок пройден!"}</h2>
+    <div class="muted">${esc(n.title)}</div>
+    <div class="tiles">
+      <div class="tile" style="--tc:var(--banana-deep)"><div class="h">Опыт</div><div class="v">+${Math.max(5, xp)}</div></div>
+      <div class="tile" style="--tc:var(--green)"><div class="h">Точность</div><div class="v">${acc}%</div></div>
+      <div class="tile" style="--tc:var(--blue)"><div class="h">Время</div><div class="v">${Math.floor(secs/60)}:${String(secs%60).padStart(2,"0")}</div></div>
+    </div>
+    <div class="muted small">+${bananas} 🍌 в копилку</div></div>`;
+  setFoot(`<div class="msg"></div><button class="btn ghost" id="againBtn">Ещё раз с новыми задачами</button><button class="btn" id="endBtn">Продолжить</button>`);
+  document.getElementById("endBtn").onclick = () => { closeOverlay(); setTimeout(scrollToCurrent, 60); };
+  document.getElementById("againBtn").onclick = () => startLesson(n, true);
+}
+
+/* =============================== CHECKLIST NODES =============================== */
+function openChecklist(n){
+  overlayShell(); setChatCtx(n);
+  L = { n, phase:"result" };
+  document.getElementById("hearts").style.visibility = "hidden";
+  if (!S.checks[n.id]) S.checks[n.id] = n.checks.map(() => false);
+  const render = () => {
+    const arr = S.checks[n.id]; const c = arr.filter(Boolean).length;
+    document.getElementById("lbar").style.width = (c/n.checks.length*100) + "%";
+    document.getElementById("ovBody").innerHTML = `<div class="kicker">${esc(n.unit.title)}</div><div class="q">${esc(n.title)}</div>
+      <div class="check-list">${n.checks.map((t, i) => `<button class="chk ${arr[i] ? "on" : ""}" data-i="${i}" aria-pressed="${arr[i]}"><span class="box">${arr[i] ? IC.check.replace('stroke-width="4"','stroke-width="4" width="16" height="16"') : ""}</span><span class="lbl">${esc(t)}</span></button>`).join("")}</div>
+      <div class="card"><h2 style="font-size:18px">${n.kind === "project" ? "Ревью от ментора" : "Работа с ментором"}</h2>
+        <p class="muted small">${n.kind === "project" ? "Вставь README, структуру папок или кусок кода, ментор разберёт как на код-ревью." : "Вставь текст или опиши ситуацию, ментор поможет."}</p>
+        <textarea class="plain" id="revIn" placeholder="${n.kind === "project" ? "README или код…" : "Текст…"}"></textarea>
+        <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap"><button class="btn blue" id="revBtn">${n.kind === "project" ? "Отправить на ревью" : "Отправить ментору"}</button>${n.id === "mock" ? `<button class="btn ghost" id="mockBtn">Начать мок-интервью в чате</button>` : ""}</div>
+        <div id="revOut" class="md" style="margin-top:12px"></div></div>`;
+    document.querySelectorAll(".chk").forEach(b => b.onclick = () => {
+      const i = Number(b.dataset.i); arr[i] = !arr[i]; sfx.tap();
+      const all = arr.every(Boolean);
+      if (all && !S.done[n.id]){ S.done[n.id] = { xp:30, at:Date.now() }; award(30, n.kind === "project" ? 50 : 10); sfx.win(); confetti(n.unit.color); toast(n.kind === "project" ? "Проект готов! +30 XP, +50 🍌" : "Шаг закрыт! +30 XP"); }
+      else if (!all && S.done[n.id]) delete S.done[n.id];
+      save(); renderStats(); render();
+    });
+    document.getElementById("revBtn").onclick = () => review(n);
+    const mb = document.getElementById("mockBtn"); if (mb) mb.onclick = () => openChat(n.ask);
+  };
+  render();
+  setFoot(`<div class="msg muted small">Отмечай пункты по мере готовности. Все пункты закрыты = шаг пройден.</div><button class="btn" id="endBtn">Готово</button>`);
+  document.getElementById("endBtn").onclick = closeOverlay;
+}
+async function review(n){
+  const txt = document.getElementById("revIn").value.trim(); const out = document.getElementById("revOut");
+  if (!txt){ toast("Вставь текст для ментора"); return; }
+  const sample = await getSample(); if (!sample){ toast("Ментор недоступен"); return; }
+  const btn = document.getElementById("revBtn"); btn.disabled = true;
+  out.innerHTML = `<p class="muted">Ментор читает<span class="dots"></span></p>`;
+  const task = n.kind === "project"
+    ? `Сделай код-ревью как тимлид для портфолио-проекта «${n.title}». Требования к проекту: ${n.checks.join(", ")}. Скажи, что уже хорошо, что критично исправить, чего не хватает для сильного портфолио под зарубежную удалёнку. Коротко, списками.`
+    : `${n.ask || "Помоги с этим шагом."} Отвечай по-русски, но сам текст для работодателя давай на английском. Будь конкретным, покажи исправленную версию.`;
+  try {
+    await sample(`Ты — ментор Умида. ${MENTOR_CTX}\n\n${task}\n\nМатериал от ученика:\n${txt.slice(0, 20000)}`, { cache:false, onText: ({text}) => { out.innerHTML = md(text); } });
+  } catch(e){ if (e && e.text) out.innerHTML = md(e.text); if (!e || e.code !== "cancelled") toast(errText(e)); }
+  finally { btn.disabled = false; }
+}
+
+/* =============================== CONFETTI =============================== */
+function confetti(color){
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const c = document.createElement("canvas"); c.className = "confetti"; document.body.appendChild(c);
+  const ctx = c.getContext("2d"); const dpr = window.devicePixelRatio || 1;
+  c.width = innerWidth*dpr; c.height = innerHeight*dpr; ctx.scale(dpr, dpr);
+  const cols = [color, "#FFC61A", "#2FB457", "#3E8BFF", "#EF4E4B", "#fff"];
+  const P = Array.from({length:140}, () => ({ x:innerWidth/2 + (Math.random()-.5)*120, y:innerHeight*0.45, vx:(Math.random()-.5)*14, vy:-Math.random()*16-6, r:Math.random()*6+4, c:cols[Math.floor(Math.random()*cols.length)], a:Math.random()*6, va:(Math.random()-.5)*.3, sh:Math.random() < .5 }));
+  let f = 0;
+  (function tick(){
+    ctx.clearRect(0, 0, innerWidth, innerHeight);
+    P.forEach(p => { p.vy += .45; p.vx *= .99; p.x += p.vx; p.y += p.vy; p.a += p.va; ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.a); ctx.fillStyle = p.c; if (p.sh) ctx.fillRect(-p.r/2, -p.r/4, p.r, p.r/2); else { ctx.beginPath(); ctx.arc(0,0,p.r/2.4,0,Math.PI*2); ctx.fill(); } ctx.restore(); });
+    if (++f < 150) requestAnimationFrame(tick); else c.remove();
+  })();
+}
+
+/* =============================== MENTOR CHAT =============================== */
+let chatCtxNode = null, turns = [], chatCtl = null, chatBusy = false;
+function setChatCtx(n){ chatCtxNode = n; document.getElementById("drCtx").textContent = "Контекст: " + (n ? n.title : (globalCurrent()?.title || "общий")); renderChips(); }
+function renderChips(){
+  const n = chatCtxNode || globalCurrent();
+  const chips = n && !n.kind ? ["Объясни тему простыми словами", "Дай задачу по теме", "Вопрос как на интервью"] : ["Что учить дальше?", "Как брать первые заказы?", "Проверь моё понимание"];
+  document.getElementById("drChips").innerHTML = turns.length ? "" : chips.map(c => `<button class="chip">${esc(c)}</button>`).join("");
+}
+function chatRules(){
+  const n = chatCtxNode || globalCurrent();
+  const done = ALL.filter(x => S.done[x.id]).map(x => x.title).slice(-8).join(", ");
+  return `Ты — AI-ментор в учебном приложении «Путь к банану». ${MENTOR_CTX}
+Роадмап: Фундамент (TypeScript, Node под капотом, PostgreSQL, Git) → NestJS и архитектура → AI-интеграции (LLM API, стриминг, RAG, агенты) → Redis, BullMQ, Docker, CI/CD → 3 проекта в портфолио → штурм рынка (резюме, профили, отклики, интервью).
+Недавно пройдено: ${done || "—"}.
+Текущая тема: ${n ? "«" + n.title + "» (блок «" + n.unit.title + "»)" : "общая"}.
+Правила: отвечай по-русски, коротко и по делу; код и имена переменных — на английском, код в блоках \`\`\`ts. Будь строгим, но доброжелательным. Не выдавай готовые решения задач сразу — сначала подсказка; полное решение, только если он прямо попросит. Когда уместно, заканчивай коротким вопросом на проверку понимания. Если он пишет транслитом — отвечай кириллицей.`;
+}
+function addMsg(role, html, cls = ""){
+  const box = document.getElementById("drMsgs"); const d = document.createElement("div");
+  d.className = "msg " + (role === "user" ? "u" : "a md") + " " + cls; d.innerHTML = html; box.appendChild(d); box.scrollTop = box.scrollHeight; return d;
+}
+function openChat(prefill){
+  document.getElementById("drawer").classList.add("open"); document.getElementById("scrim").classList.add("on");
+  if (!turns.length && !document.getElementById("drMsgs").children.length) addMsg("assistant", md("Привет, Умид. Спрашивай по теме, кидай код на ревью или проси задачу."));
+  renderChips();
+  if (prefill) sendChat(prefill); else setTimeout(() => document.getElementById("drText").focus(), 250);
+}
+function closeChat(){ document.getElementById("drawer").classList.remove("open"); document.getElementById("scrim").classList.remove("on"); }
+async function sendChat(text){
+  text = (text || "").trim(); if (!text) return;
+  if (chatBusy){ if (chatCtl) chatCtl.abort(); return; }
+  const sample = await getSample();
+  addMsg("user", esc(text));
+  document.getElementById("drText").value = ""; document.getElementById("drChips").innerHTML = "";
+  if (!sample){ addMsg("assistant", "AI-ментор недоступен в этом просмотре. Открой страницу на claude.ai.", "err"); return; }
+  turns.push({ role:"user", content:text });
+  while (turns.length > 16) turns.splice(0, 2);
+  while (turns.length && turns[0].role !== "user") turns.shift();
+  const bubble = addMsg("assistant", `<span class="muted">Думаю<span class="dots"></span></span>`);
+  chatBusy = true; chatCtl = new AbortController(); const sendBtn = document.getElementById("drSend"); sendBtn.textContent = "■"; sendBtn.classList.add("red");
+  try {
+    const { text: ans } = await sample([{ role:"user", content: chatRules() }, ...turns], { cache:false, signal: chatCtl.signal, onText: ({text}) => { bubble.innerHTML = md(text); const b = document.getElementById("drMsgs"); b.scrollTop = b.scrollHeight; } });
+    turns.push({ role:"assistant", content: ans });
+  } catch(e){
+    if (e && e.text){ bubble.innerHTML = md(e.text); turns.push({ role:"assistant", content:e.text }); }
+    else if (e && e.code === "cancelled") bubble.innerHTML = `<span class="muted">Остановлено</span>`;
+    else { bubble.classList.add("err"); bubble.textContent = errText(e); turns.pop(); }
+  } finally { chatBusy = false; sendBtn.textContent = "➤"; sendBtn.classList.remove("red"); }
+}
+document.getElementById("fab").onclick = () => openChat();
+document.getElementById("drClose").onclick = closeChat;
+document.getElementById("scrim").onclick = closeChat;
+document.getElementById("drClear").onclick = () => { if (chatCtl) chatCtl.abort(); turns = []; document.getElementById("drMsgs").innerHTML = ""; openChat(); };
+document.getElementById("drSend").onclick = () => sendChat(document.getElementById("drText").value);
+document.getElementById("drText").addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); sendChat(e.target.value); } });
+document.getElementById("drChips").onclick = e => { const c = e.target.closest(".chip"); if (c) sendChat(c.textContent); };
+
+/* =============================== GLOBAL KEYS & CONTROLS =============================== */
+document.addEventListener("keydown", e => {
+  if (!L || document.getElementById("drawer").classList.contains("open")) return;
+  if (e.target.tagName === "TEXTAREA") return;
+  const t = L.queue && L.queue[0];
+  if (L.phase === "tasks" && t && t.type === "choice" && !L.checked && /^[1-9]$/.test(e.key)){ const i = Number(e.key)-1; if (i < t.options.length) selectOpt(i); }
+  if (e.key === "Enter"){ const b = document.getElementById("contBtn") || (document.getElementById("checkBtn") && !document.getElementById("checkBtn").disabled && document.getElementById("checkBtn")) || document.getElementById("nextCard"); if (b){ e.preventDefault(); b.click(); } }
+});
+document.querySelectorAll("[data-leet]").forEach(b => b.onclick = () => { const k = b.dataset.leet; S.leet[k] = Math.max(0, (S.leet[k]||0) + Number(b.dataset.d)); save(); renderStats(); });
+document.getElementById("soundBtn").onclick = () => { S.sound = !S.sound; save(); renderStats(); if (S.sound) sfx.ok(); };
+document.getElementById("resetBtn").onclick = () => { if (confirm("Сбросить весь прогресс? Это нельзя отменить.")){ S = DEFAULT_STATE(); save(); renderAll(); toast("Прогресс сброшен"); } };
+function applyTheme(t){ if (t) document.documentElement.setAttribute("data-theme", t); else document.documentElement.removeAttribute("data-theme"); const dark = t ? t === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; document.getElementById("themeBtn").textContent = dark ? "☀️" : "🌙"; }
+let theme = null; try { theme = localStorage.getItem("banana-theme"); } catch(e) {}
+applyTheme(theme);
+document.getElementById("themeBtn").onclick = () => { const dark = document.documentElement.getAttribute("data-theme") ? document.documentElement.getAttribute("data-theme") === "dark" : matchMedia("(prefers-color-scheme: dark)").matches; theme = dark ? "light" : "dark"; try { localStorage.setItem("banana-theme", theme); } catch(e) {} applyTheme(theme); };
+
+function scrollToCurrent(){ const cur = globalCurrent(); if (!cur) return; const el = document.querySelector(`[data-node="${cur.id}"]`); if (el) el.scrollIntoView({ block:"center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); }
+
+document.getElementById("brandMascot").innerHTML = mascot();
+document.getElementById("fabMascot").innerHTML = mascot();
+document.getElementById("drAv").innerHTML = mascot();
+renderAll(); setChatCtx(null);
+setTimeout(scrollToCurrent, 200);
+</script>
+</body>
+</html>

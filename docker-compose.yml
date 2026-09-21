@@ -1,0 +1,41 @@
+# Local development: Postgres in Docker, the API on your machine or in Docker.
+#   docker compose up -d db     # database only, then `npm run start:dev` in server/
+#   docker compose up --build   # the whole thing, http://localhost:3000
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: banana
+      POSTGRES_PASSWORD: banana
+      POSTGRES_DB: banana_path
+    ports:
+      - '5432:5432'
+    volumes:
+      - banana-db:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U banana -d banana_path']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://banana:banana@db:5432/banana_path?schema=public
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+      ANTHROPIC_MODEL: ${ANTHROPIC_MODEL:-claude-opus-5}
+      APP_PASSWORD: ${APP_PASSWORD:-banana}
+      JWT_SECRET: ${JWT_SECRET:-local-development-secret-value}
+      PORT: '3000'
+    ports:
+      - '3000:3000'
+
+volumes:
+  banana-db:

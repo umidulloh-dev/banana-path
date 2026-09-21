@@ -1,0 +1,64 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    name: lint · test · build
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: banana
+          POSTGRES_PASSWORD: banana
+          POSTGRES_DB: banana_path_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U banana"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://banana:banana@localhost:5432/banana_path_test?schema=public
+      ANTHROPIC_API_KEY: sk-ant-ci-placeholder
+      ANTHROPIC_MODEL: claude-opus-5
+      APP_PASSWORD: ci-password
+      JWT_SECRET: ci-secret-value-long-enough
+
+    defaults:
+      run:
+        working-directory: server
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: server/package-lock.json
+
+      - run: npm ci
+      - run: npx prisma generate
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: E2E tests
+        run: npm run test:e2e
+
+      - name: Build
+        run: npm run build
