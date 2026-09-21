@@ -1,6 +1,6 @@
 # 🍌 Banana Path
 
-[![CI](https://github.com/OWNER/banana-path/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/banana-path/actions/workflows/ci.yml)
+[![CI](https://github.com/umidulloh-dev/banana-path/actions/workflows/ci.yml/badge.svg)](https://github.com/umidulloh-dev/banana-path/actions/workflows/ci.yml)
 
 A Duolingo-style course for Node.js and TypeScript, where every lesson is written
 on demand by Claude. The learner walks a roadmap of units, the mentor generates
@@ -88,7 +88,7 @@ global auth guard.
 **Requirements:** Node.js 22+, Docker (for PostgreSQL), an Anthropic API key.
 
 ```bash
-git clone https://github.com/OWNER/banana-path.git
+git clone https://github.com/umidulloh-dev/banana-path.git
 cd banana-path
 cp .env.example .env          # then fill in ANTHROPIC_API_KEY, APP_PASSWORD, JWT_SECRET
 
