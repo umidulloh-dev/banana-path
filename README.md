@@ -155,7 +155,7 @@ stops the process instead of failing on the first request. See
 | `DATABASE_URL` | yes | — | PostgreSQL connection string |
 | `ANTHROPIC_API_KEY` | yes | — | Server-side only |
 | `ANTHROPIC_MODEL` | no | `claude-opus-5` | Must support adaptive thinking and `effort` |
-| `ANTHROPIC_MAX_TOKENS` | no | `16000` | Per completion |
+| `ANTHROPIC_MAX_TOKENS` | no | `48000` | Per completion; lower values truncate generated lessons |
 | `ANTHROPIC_EFFORT` | no | `medium` | `low` … `max` |
 | `APP_PASSWORD` | yes | — | The single password that unlocks the site |
 | `JWT_SECRET` | yes | — | At least 16 characters |

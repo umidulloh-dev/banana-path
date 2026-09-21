@@ -158,6 +158,18 @@ pre code{background:none;border:0;padding:0;font-size:inherit;color:inherit}
 @keyframes cardin{from{transform:translateX(24px);opacity:0}to{transform:none;opacity:1}}
 .card h2{margin:0 0 10px;font-size:22px;line-height:1.25}
 .card p{margin:0 0 10px}
+.card.why{display:flex;flex-direction:column;gap:14px}
+.why h2{margin:0}
+.why-row{display:flex;gap:12px;align-items:flex-start}
+.why-ic{flex:0 0 38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:18px;background:var(--surface-2);border:2px solid var(--line)}
+.why-t{flex:1;min-width:0}
+.why-t b{display:block;font-size:12px;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-bottom:3px}
+.why-t p{margin:0 0 6px}
+.why-t p:last-child{margin:0}
+.why-row.need .why-ic{background:var(--blue-tint);border-color:var(--blue)}
+.why-row.where .why-ic{background:var(--green-tint);border-color:var(--green)}
+.why-row.without .why-ic{background:var(--red-tint);border-color:var(--red)}
+.why-analogy{background:var(--surface-2);border:2px dashed var(--line);border-radius:14px;padding:12px 14px;color:var(--muted);font-style:italic}
 .md p{margin:0 0 10px}.md ul{margin:0 0 10px;padding-left:20px}.md li{margin:2px 0}
 .opts{display:grid;gap:10px;margin-top:8px}
 .opt{display:flex;align-items:flex-start;gap:12px;text-align:left;width:100%;background:var(--surface);color:var(--ink);border:2px solid var(--line);border-radius:14px;padding:13px 14px;font-size:16px;box-shadow:0 3px 0 var(--line);transition:transform .08s, box-shadow .08s, border-color .15s, background .15s}
@@ -640,8 +652,13 @@ function lessonPrompt(n, variant){
 Собери урок в стиле Duolingo по теме «${n.title}» (блок роадмапа «${n.unit.title}»). Что покрыть: ${n.outline.join("; ")}.${n.english ? " Вопросы и объяснения давай на английском, чтобы тренировать язык для интервью." : ""}
 Вариант №${variant}.
 Верни ТОЛЬКО JSON такого вида:
-{"cards":[{"title":"...","text":"...","code":"(необязательно)"}],"tasks":[{"type":"choice","question":"...","code":"(необязательно)","options":["...","...","...","..."],"answer":0,"explain":"..."},{"type":"code","task":"...","starter":"...","hint":"..."}]}
+{"intro":{"why":"...","where":"...","without":"...","analogy":"..."},"cards":[{"title":"...","text":"...","code":"(необязательно)"}],"tasks":[{"type":"choice","question":"...","code":"(необязательно)","options":["...","...","...","..."],"answer":0,"explain":"..."},{"type":"code","task":"...","starter":"...","hint":"..."}]}
 Требования:
+- intro: объяснение «зачем эта тема вообще нужна», простыми словами, без жаргона — как будто человек слышит про неё впервые. Это самое важное поле, не халтурь в нём.
+  - why: 2–3 предложения. Какую конкретную проблему решает тема. Не определение из учебника, а причина, по которой это придумали.
+  - where: 2–3 предложения. Где это реально встречается в коде — назови конкретные ситуации (например: при разборе тела запроса в Express, в конфиге приложения, при работе с ответом стороннего API).
+  - without: 2–3 предложения. Что сломается или станет больно, если этим не пользоваться. Конкретное последствие — какой баг вылезет, что перестанет подсказывать редактор, что придётся переписывать. Не общие слова вроде «код будет хуже».
+  - analogy: одно предложение. Бытовая аналогия, помогающая ухватить суть.
 - cards: 3–4 короткие карточки теории, по одной идее на карточку, text до 500 символов, можно **жирный** и \`код\`, поле code — короткий пример (до 12 строк) без markdown-обёрток.
 - tasks: 5 задач type "choice" (смешай: понимание концепции, «что выведет код / какая будет ошибка TS», «найди ошибку», практический выбор как в реальном проекте), затем 1 задача type "code": практическая мини-задача на 5–15 строк по теме, starter — заготовка кода, hint — подсказка без готового решения.
 - В choice ровно 4 варианта, answer — индекс правильного (0–3), правильные ответы распредели по разным позициям. explain — 1–3 предложения.
@@ -649,6 +666,7 @@ function lessonPrompt(n, variant){
 }
 function validLesson(d){
   if (!d || typeof d !== "object") return null;
+  const intro = validIntro(d.intro);
   const cards = Array.isArray(d.cards) ? d.cards.filter(c => c && c.title && c.text).slice(0, 5) : [];
   const tasks = (Array.isArray(d.tasks) ? d.tasks : []).filter(t => {
     if (!t) return false;
@@ -657,7 +675,16 @@ function validLesson(d){
     return false;
   }).map(t => t.type === "choice" ? Object.assign({}, t, {answer:Number(t.answer)}) : t);
   if (!tasks.length) return null;
-  return { cards, tasks };
+  return { intro, cards, tasks };
+}
+// Экран «зачем эта тема» показываем, только если ментор прислал все три части.
+// Старые уроки из кэша его не содержат — тогда урок просто начнётся с теории.
+function validIntro(x){
+  if (!x || typeof x !== "object") return null;
+  const str = v => (typeof v === "string" ? v.trim() : "");
+  const why = str(x.why), where = str(x.where), without = str(x.without);
+  if (!why || !where || !without) return null;
+  return { why, where, without, analogy: str(x.analogy) };
 }
 
 let L = null; // lesson runtime
@@ -697,8 +724,9 @@ async function startLesson(n, fresh = false){
     if (!L || L.n !== n) return;
     const lesson = validLesson(data);
     if (!lesson) return lessonUnavailable(n, "Ментор прислал пустой урок. Попробуй ещё раз.", true);
-    L.cards = lesson.cards; L.queue = lesson.tasks.map((t, i) => Object.assign({ _i:i }, t)); L.total = L.cards.length + L.queue.length; L.variant = variant;
-    L.phase = L.cards.length ? "cards" : "tasks"; L.cardIdx = 0; L.started = Date.now();
+    L.intro = lesson.intro; L.cards = lesson.cards; L.queue = lesson.tasks.map((t, i) => Object.assign({ _i:i }, t));
+    L.total = (L.intro ? 1 : 0) + L.cards.length + L.queue.length; L.variant = variant;
+    L.phase = L.intro ? "intro" : (L.cards.length ? "cards" : "tasks"); L.cardIdx = 0; L.started = Date.now();
     step();
   } catch(e){
     clearInterval(tipTimer);
@@ -719,13 +747,28 @@ function setFoot(html, cls = ""){
   f.className = "ov-foot " + cls; const inn = document.getElementById("ovFootIn"); inn.innerHTML = html; if (cls) inn.classList.add("foot-anim"); else inn.classList.remove("foot-anim");
 }
 function progress(){
-  const doneCount = (L.phase === "cards" ? L.cardIdx : L.cards.length) + L.answered;
+  const introStep = L.intro ? 1 : 0;
+  const doneCount = L.phase === "intro" ? 0 : introStep + (L.phase === "cards" ? L.cardIdx : L.cards.length) + L.answered;
   const pct = Math.min(100, doneCount / Math.max(1, L.total) * 100);
   const bar = document.getElementById("lbar"); if (bar) bar.style.width = pct + "%";
 }
 function step(){
   if (!L) return;
   progress();
+  if (L.phase === "intro"){
+    const w = L.intro;
+    document.getElementById("ovBody").innerHTML = `<div class="kicker">Зачем эта тема</div>
+      <div class="card why">
+        <h2>${inline(L.n.title)}</h2>
+        <div class="why-row need"><div class="why-ic">\u{1F3AF}</div><div class="why-t"><b>Зачем это нужно</b>${md(w.why)}</div></div>
+        <div class="why-row where"><div class="why-ic">\u{1F6E0}</div><div class="why-t"><b>Где применяется</b>${md(w.where)}</div></div>
+        <div class="why-row without"><div class="why-ic">\u26A0</div><div class="why-t"><b>Что будет без этого</b>${md(w.without)}</div></div>
+        ${w.analogy ? `<div class="why-analogy">${inline(w.analogy)}</div>` : ""}
+      </div>`;
+    setFoot(`<div class="msg muted small">Сначала — зачем, потом теория</div><button class="btn" id="nextIntro">Понятно, дальше</button>`);
+    document.getElementById("nextIntro").onclick = () => { sfx.tap(); L.phase = L.cards.length ? "cards" : "tasks"; step(); };
+    return;
+  }
   if (L.phase === "cards"){
     const c = L.cards[L.cardIdx];
     L.phase = "cards";

@@ -63,6 +63,16 @@ export class AnthropicService implements OnModuleInit {
         throw ApiError.refused();
       }
 
+      // Hitting the cap truncates the answer mid-sentence. For /api/ai/json that
+      // surfaces as unparseable JSON, which is a misleading thing to debug — so
+      // say what actually happened instead.
+      if (message.stop_reason === 'max_tokens') {
+        this.logger.warn(
+          `Answer hit the ${this.config.get('ANTHROPIC_MAX_TOKENS', { infer: true })} token cap and was cut off`,
+        );
+        throw ApiError.upstream('The answer was too long and got cut off — raise ANTHROPIC_MAX_TOKENS');
+      }
+
       return message.content
         .filter((block): block is Anthropic.TextBlock => block.type === 'text')
         .map((block) => block.text)

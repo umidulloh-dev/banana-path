@@ -13,7 +13,12 @@ export const envSchema = z.object({
 
   ANTHROPIC_API_KEY: z.string().min(1, 'ANTHROPIC_API_KEY is required'),
   ANTHROPIC_MODEL: z.string().min(1).default('claude-opus-5'),
-  ANTHROPIC_MAX_TOKENS: z.coerce.number().int().positive().default(16000),
+  /**
+   * Generating a full lesson (intro + cards + tasks) with adaptive thinking
+   * runs long, and hitting the cap truncates the JSON mid-answer. Requests are
+   * streamed, so a high ceiling costs nothing extra — only generated tokens bill.
+   */
+  ANTHROPIC_MAX_TOKENS: z.coerce.number().int().positive().default(48000),
   ANTHROPIC_EFFORT: z.enum(['low', 'medium', 'high', 'xhigh', 'max']).default('medium'),
 
   APP_PASSWORD: z.string().min(1, 'APP_PASSWORD is required'),
