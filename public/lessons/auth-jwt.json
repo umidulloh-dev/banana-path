@@ -1,0 +1,99 @@
+{
+  "intro": {
+    "why": "Если сервер хранит пользователя как «залогинен навсегда», это опасно: украли токен — получили доступ навечно. JWT с access и refresh токенами придумали, чтобы доступ жил недолго и его можно было быстро отозвать, а пользователю не приходилось логиниться каждые 15 минут.",
+    "where": "Это встречается в middleware Express, который проверяет заголовок Authorization на каждый защищённый роут, в отдельном эндпоинте /refresh, который выдаёт новый access token, и в логике логаута, где refresh token удаляется из базы или чёрного списка.",
+    "without": "Без этой схемы либо токен живёт вечно (украли — доступ навсегда), либо приходится заставлять пользователя логиниться каждые несколько минут, что бесит и ломает UX. Также без ротации refresh токенов невозможно понять, что токен был украден и его пора заблокировать.",
+    "analogy": "Access token — это временный пропуск на сутки в бизнес-центр, а refresh token — это твой постоянный документ на ресепшене, по которому тебе каждый раз выписывают новый пропуск."
+  },
+  "cards": [
+    {
+      "title": "Access vs Refresh",
+      "text": "**Access token** — короткоживущий (обычно 5-15 мин), кладётся в каждый запрос, даёт доступ к API. **Refresh token** — долгоживущий (дни/недели), используется только для получения нового access token. Если access украли, ущерб ограничен временем его жизни.",
+      "code": "const accessToken = jwt.sign({ userId }, ACCESS_SECRET, { expiresIn: '15m' });\nconst refreshToken = jwt.sign({ userId }, REFRESH_SECRET, { expiresIn: '7d' });"
+    },
+    {
+      "title": "Где хранить токены",
+      "text": "**Access token** обычно хранят в памяти приложения (не в localStorage — уязвимо к XSS). **Refresh token** лучше класть в httpOnly cookie — тогда JS на клиенте его вообще не видит, и его нельзя украсть через XSS-скрипт.",
+      "code": "res.cookie('refreshToken', token, {\n  httpOnly: true,\n  secure: true,\n  sameSite: 'strict'\n});"
+    },
+    {
+      "title": "Ротация refresh токенов",
+      "text": "Каждый раз, когда клиент обменивает refresh token на новый access token, сервер выдаёт **новый** refresh token и делает старый недействительным (сохраняя это в БД). Если кто-то попытается использовать уже использованный refresh token — это сигнал кражи, и все токены пользователя отзываются.",
+      "code": "if (usedTokens.has(refreshToken)) {\n  revokeAllTokens(userId);\n  throw new Error('Token reuse detected');\n}"
+    },
+    {
+      "title": "Logout",
+      "text": "Logout — это не «удалить токен на клиенте», а **инвалидировать refresh token на сервере**: удалить его из базы/whitelist или добавить в blacklist. Access token просто доживёт свои 15 минут и станет бесполезен сам.",
+      "code": "async function logout(userId, refreshToken) {\n  await db.refreshTokens.delete({ userId, refreshToken });\n  res.clearCookie('refreshToken');\n}"
+    }
+  ],
+  "tasks": [
+    {
+      "type": "choice",
+      "question": "Почему access token делают короткоживущим (например, 15 минут)?",
+      "options": [
+        "Чтобы уменьшить нагрузку на сервер",
+        "Чтобы ограничить ущерб, если токен был украден",
+        "Потому что jwt.sign не умеет работать с долгим expiresIn",
+        "Чтобы токен занимал меньше места"
+      ],
+      "answer": 1,
+      "explain": "Короткий срок жизни access token ограничивает окно, в течение которого украденный токен может быть использован злоумышленником."
+    },
+    {
+      "type": "choice",
+      "question": "Где безопаснее всего хранить refresh token на клиенте (в браузере)?",
+      "options": [
+        "В localStorage",
+        "В обычной переменной JS",
+        "В httpOnly cookie",
+        "В sessionStorage"
+      ],
+      "answer": 2,
+      "explain": "httpOnly cookie недоступна для чтения через JavaScript, поэтому XSS-атака не сможет украсть refresh token оттуда."
+    },
+    {
+      "type": "choice",
+      "question": "Что не так с этим кодом логаута?",
+      "code": "function logout(req, res) {\n  res.clearCookie('refreshToken');\n  res.json({ message: 'Logged out' });\n}",
+      "options": [
+        "Ничего, всё корректно",
+        "Не удаляется refresh token на сервере — он остаётся валидным",
+        "Нужно ставить httpOnly: false в cookie",
+        "clearCookie нужно вызывать до json"
+      ],
+      "answer": 1,
+      "explain": "Реальный logout должен инвалидировать refresh token на сервере (удалить из БД/whitelist), иначе украденный ранее токен продолжит работать даже после 'выхода'."
+    },
+    {
+      "type": "choice",
+      "question": "Зачем нужна ротация refresh токенов (выдача нового при каждом обновлении)?",
+      "options": [
+        "Чтобы уменьшить размер токена",
+        "Чтобы можно было обнаружить повторное использование украденного токена",
+        "Это требование стандарта JWT",
+        "Чтобы не использовать httpOnly cookie"
+      ],
+      "answer": 1,
+      "explain": "Если старый (уже использованный) refresh token попытаются применить снова, это явный признак кражи — сервер может отозвать все токены пользователя."
+    },
+    {
+      "type": "choice",
+      "question": "Пользователь залогинился, access token истёк через 15 минут. Что должно произойти дальше при обычном сценарии?",
+      "options": [
+        "Пользователь должен снова ввести логин и пароль",
+        "Клиент автоматически отправляет refresh token на /refresh и получает новый access token",
+        "Сервер продлевает старый access token",
+        "Приложение перестаёт работать до перезапуска"
+      ],
+      "answer": 1,
+      "explain": "Именно для этого и существует refresh token — чтобы получать новый access token без повторного ввода пароля."
+    },
+    {
+      "type": "code",
+      "task": "Напиши функцию refreshAccessToken(refreshToken), которая: 1) проверяет refresh token через jwt.verify с REFRESH_SECRET, 2) если валиден — создаёт и возвращает новый access token (expiresIn '15m') с payload { userId }, 3) если невалиден — бросает ошибку 'Invalid refresh token'.",
+      "starter": "const jwt = require('jsonwebtoken');\nconst REFRESH_SECRET = 'refresh-secret';\nconst ACCESS_SECRET = 'access-secret';\n\nfunction refreshAccessToken(refreshToken) {\n  // твой код здесь\n}",
+      "hint": "Оберни jwt.verify в try/catch: в try достань payload.userId и сгенерируй новый accessToken через jwt.sign, в catch — брось new Error('Invalid refresh token')."
+    }
+  ]
+}

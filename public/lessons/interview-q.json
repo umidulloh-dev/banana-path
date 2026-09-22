@@ -1,0 +1,99 @@
+{
+  "intro": {
+    "why": "На собеседованиях за рубежом почти всегда спрашивают одни и те же базовые темы: как работает event loop, зачем нужны типы, как индексы ускоряют базу данных и как защитить API. Если ты не можешь объяснить это простыми словами на английском, рекрутер решит, что ты не понимаешь Node.js глубоко, даже если ты написал сто продакшн-фичей.",
+    "where": "Эти вопросы всплывают на техническом интервью, в live-coding сессиях, и даже в обычном код-ревью, когда коллега спрашивает 'why did you add an index here?' или 'why is this callback blocking the event loop?'. Также это база для системного дизайна — без понимания event loop невозможно объяснить, почему один Node-процесс держит тысячи соединений.",
+    "without": "Без этого ты будешь путаться в объяснениях: скажешь 'Node.js многопоточный', и интервьюер сразу поймёт, что ты не готовился. Без индексов твой запрос к базе будет работать 3 секунды вместо 3 миллисекунд, а без базовой security (helmet, rate limiting, валидация) твой API взломают за один день на реальном проекте.",
+    "analogy": "Это как выучить грамматику языка перед тем как говорить бегло — можно понимать слова, но без структуры тебя не поймут в важный момент."
+  },
+  "cards": [
+    {
+      "title": "Event Loop",
+      "text": "Node.js работает в одном потоке, но не блокируется благодаря **event loop**. Тяжёлые I/O операции (файлы, сеть, БД) уходят в фон через libuv, а основной поток продолжает выполнять код. Когда операция завершена, callback ставится в очередь и выполняется, когда стек свободен.",
+      "code": "console.log('1');\nsetTimeout(() => console.log('2'), 0);\nPromise.resolve().then(() => console.log('3'));\nconsole.log('4');\n// Output: 1 4 3 2"
+    },
+    {
+      "title": "TypeScript: types vs runtime",
+      "text": "TypeScript типы существуют только на этапе компиляции — в runtime их нет. Это значит, что `interface` не проверяет данные, пришедшие из сети или БД, они могут не совпадать с типом. Для реальной проверки нужны библиотеки типа `zod` или `class-validator`.",
+      "code": "interface User { age: number }\nconst data: User = JSON.parse(req.body); // no real check!"
+    },
+    {
+      "title": "Database Indexes",
+      "text": "Индекс — это структура данных (обычно B-tree), которая позволяет базе данных находить строки без полного сканирования таблицы. Без индекса запрос по полю `email` проверяет каждую строку — O(n). С индексом — O(log n). Но индексы замедляют `INSERT`/`UPDATE`, поэтому их добавляют только на часто фильтруемые поля.",
+      "code": "db.collection('users').createIndex({ email: 1 }, { unique: true });"
+    },
+    {
+      "title": "API Security basics",
+      "text": "Базовая защита API включает: валидацию входных данных, `rate limiting` (защита от брутфорса), `helmet` (HTTP заголовки), хранение секретов в `.env`, и никогда не доверять данным от клиента напрямую — даже если фронтенд их проверил.",
+      "code": "import helmet from 'helmet';\napp.use(helmet());\napp.use(rateLimit({ windowMs: 60000, max: 100 }));"
+    }
+  ],
+  "tasks": [
+    {
+      "type": "choice",
+      "question": "What best describes the Node.js event loop?",
+      "options": [
+        "Node.js runs multiple threads to handle concurrent requests",
+        "Node.js uses a single thread with a loop that delegates I/O to the background and processes callbacks when ready",
+        "Node.js blocks the main thread until every I/O operation finishes",
+        "Node.js creates a new process for every incoming request"
+      ],
+      "answer": 1,
+      "explain": "Node.js — однопоточный, но не блокирующий: тяжёлые операции уходят в фон (libuv), а callback обрабатывается когда основной поток свободен."
+    },
+    {
+      "type": "choice",
+      "question": "What will this code output?",
+      "code": "console.log('A');\nsetTimeout(() => console.log('B'), 0);\nPromise.resolve().then(() => console.log('C'));\nconsole.log('D');",
+      "options": [
+        "A B C D",
+        "A D B C",
+        "A D C B",
+        "D A C B"
+      ],
+      "answer": 2,
+      "explain": "Синхронный код выполняется первым (A, D), затем microtask queue (Promise, C), затем macrotask queue (setTimeout, B)."
+    },
+    {
+      "type": "choice",
+      "question": "Why doesn't a TypeScript `interface` fully protect your app from bad data at runtime?",
+      "options": [
+        "Interfaces are removed during compilation and don't check actual values coming from network or DB",
+        "Interfaces only work with classes, not plain objects",
+        "Interfaces are checked at runtime but only for strings",
+        "TypeScript automatically validates JSON.parse output against interfaces"
+      ],
+      "answer": 0,
+      "explain": "TypeScript типы существуют только на этапе компиляции. Для runtime-валидации нужны отдельные инструменты, например zod."
+    },
+    {
+      "type": "choice",
+      "question": "You have a `users` collection with millions of documents and frequently query by `email`. What should you do?",
+      "options": [
+        "Nothing, MongoDB scans fast enough by default",
+        "Add an index on the `email` field",
+        "Store users in an array instead of a collection",
+        "Increase server RAM to compensate for slow queries"
+      ],
+      "answer": 1,
+      "explain": "Индекс на часто используемом для фильтрации поле резко ускоряет поиск, превращая полное сканирование O(n) в O(log n)."
+    },
+    {
+      "type": "choice",
+      "question": "Which of these is NOT a recommended basic API security practice?",
+      "options": [
+        "Using helmet to set secure HTTP headers",
+        "Trusting client-side validation as the only line of defense",
+        "Applying rate limiting on login endpoints",
+        "Validating and sanitizing all incoming request data"
+      ],
+      "answer": 1,
+      "explain": "Валидацию на клиенте легко обойти (curl, Postman), поэтому сервер обязательно должен валидировать данные независимо."
+    },
+    {
+      "type": "code",
+      "task": "Write an Express middleware function `validateAge` that checks if `req.body.age` is a number greater than 0. If not, respond with status 400 and JSON `{ error: 'Invalid age' }`. Otherwise call `next()`.",
+      "starter": "function validateAge(req, res, next) {\n  // your code here\n}",
+      "hint": "Проверь typeof req.body.age === 'number' и что значение больше 0, иначе res.status(400).json(...)."
+    }
+  ]
+}

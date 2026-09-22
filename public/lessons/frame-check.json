@@ -1,0 +1,107 @@
+{
+  "cards": [],
+  "tasks": [
+    {
+      "type": "choice",
+      "question": "В NestJS контроллер объявлен как:\n@Controller('users')\nexport class UsersController {\n  @Get(':id')\n  findOne(@Param('id') id: string) { return id; }\n}\nКакой модуль должен зарегистрировать этот контроллер, чтобы Nest подхватил роут?",
+      "options": [
+        "Модуль, где UsersController указан в массиве controllers",
+        "Любой модуль, импортированный в AppModule",
+        "Модуль не нужен, Nest сканирует все файлы автоматически",
+        "Достаточно декоратора @Controller, регистрация не требуется"
+      ],
+      "answer": 0,
+      "explain": "Nest строит граф зависимостей на основе модулей, и контроллер должен быть явно указан в свойстве controllers своего модуля."
+    },
+    {
+      "type": "choice",
+      "question": "Что произойдёт, если сервис объявлен с @Injectable() без указания scope и внедряется в несколько контроллеров?",
+      "options": [
+        "Будет создан один общий экземпляр (singleton) на всё приложение",
+        "Для каждого запроса создаётся новый экземпляр",
+        "Для каждого контроллера создаётся отдельный экземпляр",
+        "Nest выбросит ошибку, нужно явно указывать scope"
+      ],
+      "answer": 0,
+      "explain": "По умолчанию scope провайдера — DEFAULT (singleton), экземпляр создаётся один раз при старте приложения."
+    },
+    {
+      "type": "choice",
+      "question": "Клиент отправляет POST /users с валидными данными для создания нового пользователя. Какой HTTP статус-код правильно вернуть?",
+      "options": [
+        "200 OK",
+        "201 Created",
+        "204 No Content",
+        "202 Accepted"
+      ],
+      "answer": 1,
+      "explain": "201 Created — стандартный ответ для успешного создания ресурса методом POST, часто с Location-заголовком на новый ресурс."
+    },
+    {
+      "type": "choice",
+      "question": "В DTO поле age описано так:\n@IsInt()\n@Min(0)\nage: number;\nКлиент прислал { \"age\": \"twenty\" }. Что произойдёт при включённом глобальном ValidationPipe с transform: true?",
+      "options": [
+        "Запрос пройдёт, age станет NaN",
+        "ValidationPipe вернёт 400 Bad Request с описанием ошибки",
+        "Сервер вернёт 500 Internal Server Error",
+        "Поле age будет проигнорировано"
+      ],
+      "answer": 1,
+      "explain": "class-validator проверит тип и ограничения, а при несоответствии ValidationPipe сгенерирует BadRequestException с деталями ошибок."
+    },
+    {
+      "type": "choice",
+      "question": "Зачем в проекте с Prisma/TypeORM использовать миграции, а не просто synchronize:true на проде?",
+      "options": [
+        "Миграции работают быстрее при каждом старте приложения",
+        "Миграции дают контролируемые, версионируемые и обратимые изменения схемы БД",
+        "synchronize нужен только для тестов, а миграции — для локальной разработки",
+        "Без миграций ORM вообще не может подключиться к базе"
+      ],
+      "answer": 1,
+      "explain": "synchronize:true на проде опасен — может привести к потере данных при автогенерации схемы; миграции дают явный контролируемый процесс изменений."
+    },
+    {
+      "type": "choice",
+      "question": "Какой подход к хранению refresh token на клиенте (веб-приложение) считается наиболее безопасным?",
+      "options": [
+        "В localStorage, чтобы легко доставать из JS",
+        "В обычной куке без флагов",
+        "В HttpOnly, Secure cookie с флагом SameSite",
+        "В Redux store в памяти приложения"
+      ],
+      "answer": 2,
+      "explain": "HttpOnly-кука недоступна из JS (защита от XSS), а Secure и SameSite снижают риски перехвата и CSRF."
+    },
+    {
+      "type": "choice",
+      "question": "В NestJS есть RolesGuard, который проверяет метаданные, установленные декоратором @Roles('admin'). Что нужно сделать, чтобы RolesGuard мог прочитать эти метаданные внутри canActivate?",
+      "options": [
+        "Guard сам автоматически получает доступ к декораторам без Reflector",
+        "Использовать Reflector.get(ROLES_KEY, context.getHandler()) внутри guard",
+        "Передать роли через query-параметр запроса",
+        "RolesGuard должен наследоваться от класса Roles"
+      ],
+      "answer": 1,
+      "explain": "Reflector — сервис Nest для чтения метаданных, установленных через SetMetadata/кастомные декораторы вроде @Roles."
+    },
+    {
+      "type": "choice",
+      "question": "В unit-тесте нужно протестировать UsersService, который зависит от UsersRepository (Prisma). Как правильно изолировать тест от реальной БД?",
+      "options": [
+        "Поднять тестовую БД и гонять реальные SQL-запросы",
+        "Замокать методы репозитория через jest.fn() и передать мок в тестовый модуль Nest",
+        "Использовать e2e-тест вместо unit-теста",
+        "Просто не тестировать сервис, тестировать только контроллер"
+      ],
+      "answer": 1,
+      "explain": "Unit-тест должен быть изолирован от инфраструктуры — методы репозитория подменяются моками (jest.fn()), чтобы проверять только логику сервиса."
+    },
+    {
+      "type": "code",
+      "task": "Дополни код NestJS-контроллера так, чтобы: 1) маршрут был защищён JwtAuthGuard и RolesGuard; 2) доступ был только у роли 'admin' (используй кастомный декоратор @Roles); 3) тело запроса валидировалось через DTO UpdateUserDto с class-validator; 4) при успехе возвращался обновлённый пользователь со статусом 200.",
+      "starter": "import { Controller, Patch, Param, Body, UseGuards } from '@nestjs/common';\nimport { UsersService } from './users.service';\nimport { UpdateUserDto } from './dto/update-user.dto';\n// import JwtAuthGuard, RolesGuard, Roles decorator\n\n@Controller('users')\nexport class UsersController {\n  constructor(private readonly usersService: UsersService) {}\n\n  // TODO: apply guards and roles decorator\n  @Patch(':id')\n  async update(\n    @Param('id') id: string,\n    @Body() dto: UpdateUserDto,\n  ) {\n    return this.usersService.update(id, dto);\n  }\n}",
+      "hint": "Используй @UseGuards(JwtAuthGuard, RolesGuard) над методом или классом, @Roles('admin') из кастомного декоратора (SetMetadata), а UpdateUserDto должен иметь декораторы class-validator (@IsOptional, @IsString и т.п.) и глобальный ValidationPipe уже настроен в main.ts."
+    }
+  ]
+}

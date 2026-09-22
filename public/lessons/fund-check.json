@@ -1,0 +1,115 @@
+{
+  "cards": [],
+  "tasks": [
+    {
+      "type": "choice",
+      "question": "Что выведет TypeScript-компилятор (ошибка компиляции или нет) для следующего кода?",
+      "code": "let x: unknown = 5;\nlet y: any = 5;\n\nconsole.log(x.toFixed(2));\nconsole.log(y.toFixed(2));",
+      "options": [
+        "Ошибка на строке с x, строка с y скомпилируется без ошибок",
+        "Обе строки скомпилируются без ошибок",
+        "Ошибка на строке с y, строка с x скомпилируется без ошибок",
+        "Ошибки на обеих строках"
+      ],
+      "answer": 0,
+      "explain": "unknown требует явного сужения типа перед использованием методов, а any полностью отключает проверки типов."
+    },
+    {
+      "type": "choice",
+      "question": "Чем принципиально отличается interface от type в TypeScript при работе с объектными типами?",
+      "code": "",
+      "options": [
+        "type не поддерживает опциональные поля, interface поддерживает",
+        "interface поддерживает declaration merging (можно дописать поля в другом месте кода тем же именем), а type — нет",
+        "interface можно использовать только для классов, type — только для объектов",
+        "Разницы нет, это полные синонимы во всех случаях"
+      ],
+      "answer": 1,
+      "explain": "Ключевая особенность interface — слияние деклараций при повторном объявлении с тем же именем, у type такого поведения нет."
+    },
+    {
+      "type": "choice",
+      "question": "Какой тип возвращаемого значения корректно описывает функцию, которая всегда выбрасывает исключение и никогда не завершается нормально?",
+      "code": "function fail(message: string) {\n  throw new Error(message);\n}",
+      "options": [
+        "void",
+        "undefined",
+        "never",
+        "any"
+      ],
+      "answer": 2,
+      "explain": "never используется для функций, которые никогда не возвращают управление — либо всегда бросают исключение, либо уходят в бесконечный цикл."
+    },
+    {
+      "type": "choice",
+      "question": "Дан discriminated union. Какой код корректно и типобезопасно обработает все случаи без ошибки компиляции?",
+      "code": "type Shape =\n  | { kind: 'circle'; radius: number }\n  | { kind: 'square'; side: number };\n\nfunction area(shape: Shape): number {\n  // ???\n}",
+      "options": [
+        "if (shape.kind === 'circle') return Math.PI * shape.radius ** 2; else return shape.side ** 2;",
+        "if (shape.radius) return Math.PI * shape.radius ** 2; else return shape.side ** 2;",
+        "return shape.kind === 'circle' ? Math.PI * shape.radius ** 2 : shape.side ** 2; // без discriminant проверки",
+        "switch(shape) { case 'circle': ...; case 'square': ...; }"
+      ],
+      "answer": 0,
+      "explain": "Проверка через литеральное поле-дискриминант kind позволяет TypeScript сузить union до конкретного варианта внутри веток."
+    },
+    {
+      "type": "choice",
+      "question": "Что делает generic-функция с ограничением extends в примере ниже?",
+      "code": "function getProperty<T, K extends keyof T>(obj: T, key: K): T[K] {\n  return obj[key];\n}",
+      "options": [
+        "Гарантирует, что key — это строка любой длины",
+        "Ограничивает key только ключами, реально существующими в объекте T, и типизирует возврат по типу этого ключа",
+        "Позволяет передавать любой второй аргумент без проверки типов",
+        "Делает функцию асинхронной"
+      ],
+      "answer": 1,
+      "explain": "keyof T собирает union всех ключей типа T, а extends keyof T гарантирует, что K — один из существующих ключей, при этом T[K] даёт точный тип значения."
+    },
+    {
+      "type": "choice",
+      "question": "Какой utility type нужно использовать, чтобы получить тип возвращаемого значения функции, не вызывая её?",
+      "code": "function createUser() {\n  return { id: 1, name: 'Umid' };\n}\n\ntype User = ???<typeof createUser>;",
+      "options": [
+        "Parameters<typeof createUser>",
+        "Partial<typeof createUser>",
+        "ReturnType<typeof createUser>",
+        "Pick<typeof createUser, 'id'>"
+      ],
+      "answer": 2,
+      "explain": "ReturnType<T> извлекает тип возвращаемого значения функции, а typeof нужен, чтобы получить тип самой функции из значения."
+    },
+    {
+      "type": "choice",
+      "question": "В каком порядке выполнится код в Node.js?",
+      "code": "console.log('start');\n\nsetTimeout(() => console.log('timeout'), 0);\nsetImmediate(() => console.log('immediate'));\nprocess.nextTick(() => console.log('nextTick'));\nPromise.resolve().then(() => console.log('promise'));\n\nconsole.log('end');",
+      "options": [
+        "start, end, nextTick, promise, timeout, immediate",
+        "start, end, promise, nextTick, immediate, timeout",
+        "start, nextTick, promise, end, timeout, immediate",
+        "start, end, nextTick, promise, immediate, timeout (порядок timeout/immediate не гарантирован в основном коде)"
+      ],
+      "answer": 0,
+      "explain": "Сначала выполняется весь синхронный код, затем очередь nextTick, затем микрозадачи (промисы), и только потом макрозадачи setTimeout/setImmediate."
+    },
+    {
+      "type": "choice",
+      "question": "В чём разница между Promise.all и Promise.allSettled при обработке нескольких асинхронных запросов?",
+      "code": "const results = await Promise.all([\n  fetchUser(1),\n  fetchUser(2),\n  fetchUser(3),\n]);",
+      "options": [
+        "Promise.all ждёт все промисы и падает при первом отклонённом, Promise.allSettled всегда дожидается всех и возвращает статус каждого",
+        "Они полностью идентичны по поведению",
+        "Promise.allSettled быстрее, потому что не ждёт медленные промисы",
+        "Promise.all выполняет промисы последовательно, а allSettled — параллельно"
+      ],
+      "answer": 0,
+      "explain": "Promise.all реджектится сразу при первой ошибке любого промиса, тогда как allSettled всегда резолвится массивом объектов со статусом fulfilled/rejected для каждого промиса."
+    },
+    {
+      "type": "code",
+      "task": "Напиши TypeScript-функцию transferFunds, которая переводит деньги между двумя счетами в PostgreSQL в рамках транзакции. Функция должна: 1) начать транзакцию (BEGIN), 2) уменьшить баланс счёта fromId и увеличить баланс счёта toId, 3) при любой ошибке сделать ROLLBACK и пробросить исключение дальше, 4) при успехе сделать COMMIT. Используй async/await и объект client с методом client.query(sql, params): Promise<any>. Обязательно освободи клиента (client.release()) в блоке finally.",
+      "starter": "import { Pool, PoolClient } from 'pg';\n\nconst pool = new Pool();\n\nasync function transferFunds(fromId: number, toId: number, amount: number): Promise<void> {\n  const client: PoolClient = await pool.connect();\n  // TODO: реализовать транзакцию BEGIN / queries / COMMIT / ROLLBACK\n  // не забудь finally { client.release() }\n}",
+      "hint": "Оберни последовательность BEGIN -> UPDATE (fromId) -> UPDATE (toId) -> COMMIT в try/catch, а в catch сделай ROLLBACK и re-throw ошибки; client.release() вызови в finally, чтобы соединение вернулось в пул в любом случае."
+    }
+  ]
+}

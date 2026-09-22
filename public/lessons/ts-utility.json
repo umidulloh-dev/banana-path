@@ -1,0 +1,100 @@
+{
+  "intro": {
+    "why": "Часто у тебя уже есть один тип (например, User), но в разных местах кода нужна его слегка изменённая версия: то все поля опциональны (при обновлении профиля), то только часть полей (при выводе публичного профиля), то поля нельзя менять (конфиг). Писать новый interface руками для каждого случая — дублирование и риск, что типы разъедутся. Utility types позволяют получать нужную форму типа автоматически из уже существующего.",
+    "where": "В Express-контроллере для PATCH /users/:id тело запроса — это Partial<User>, потому что клиент может прислать не все поля. В конфиге приложения используешь Readonly<Config>, чтобы никто случайно не поменял настройки в рантайме. При возврате пользователю публичных данных используешь Omit<User,'password'>, а для типизации результата функции — ReturnType<typeof someFunc>.",
+    "without": "Без utility types ты либо копируешь интерфейс и переписываешь его вручную под каждую задачу (и забываешь синхронизировать при изменениях), либо ставишь any и теряешь подсказки редактора и проверку типов. В итоге баг вида 'забыл passwordHash из ответа API' TypeScript тебе не подсветит.",
+    "analogy": "Это как трафарет: у тебя есть один эскиз (тип), а трафареты (Partial, Pick, Omit...) позволяют быстро вырезать из него нужную форму, не рисуя заново."
+  },
+  "cards": [
+    {
+      "title": "Partial, Required, Readonly",
+      "text": "**Partial<T>** делает все поля опциональными — удобно для обновлений (PATCH). **Required<T>** — наоборот, все поля обязательны. **Readonly<T>** запрещает менять поля после создания объекта.",
+      "code": "interface User { id: string; name: string; }\n\nfunction updateUser(id: string, data: Partial<User>) {\n  // data.name может отсутствовать\n}\n\nconst config: Readonly<{ port: number }> = { port: 3000 };\n// config.port = 4000; // Ошибка"
+    },
+    {
+      "title": "Pick и Omit",
+      "text": "**Pick<T, Keys>** выбирает только нужные поля из типа. **Omit<T, Keys>** — наоборот, убирает указанные поля, оставляя остальные. Часто используют, чтобы скрыть чувствительные данные (пароль, токены).",
+      "code": "interface User { id: string; name: string; password: string; }\n\ntype PublicUser = Omit<User, 'password'>;\ntype UserPreview = Pick<User, 'id' | 'name'>;"
+    },
+    {
+      "title": "Record",
+      "text": "**Record<Keys, Type>** создаёт объектный тип с заданными ключами и типом значений. Удобно для словарей, кэшей, мапы 'роль -> права'.",
+      "code": "type Role = 'admin' | 'user' | 'guest';\ntype Permissions = Record<Role, string[]>;\n\nconst perms: Permissions = {\n  admin: ['read', 'write', 'delete'],\n  user: ['read'],\n  guest: [],\n};"
+    },
+    {
+      "title": "ReturnType, Parameters, Awaited",
+      "text": "**ReturnType<typeof fn>** достаёт тип возвращаемого значения функции. **Parameters<typeof fn>** — тип массива аргументов. **Awaited<T>** разворачивает Promise, доставая тип из-под него — полезно с async-функциями.",
+      "code": "function getUser() { return { id: '1', name: 'Umid' }; }\n\ntype User = ReturnType<typeof getUser>;\ntype Args = Parameters<typeof getUser>;\n\nasync function fetchUser(): Promise<User> { return getUser(); }\ntype Result = Awaited<ReturnType<typeof fetchUser>>; // User"
+    }
+  ],
+  "tasks": [
+    {
+      "type": "choice",
+      "question": "У тебя есть interface Product с полями id, name, price. Тебе нужен тип для PATCH-запроса, где клиент может прислать любую часть полей. Какой utility type использовать?",
+      "options": [
+        "Required<Product>",
+        "Partial<Product>",
+        "Readonly<Product>",
+        "Pick<Product, 'id'>"
+      ],
+      "answer": 1,
+      "explain": "Partial делает все поля опциональными, что идеально подходит для частичного обновления через PATCH."
+    },
+    {
+      "type": "choice",
+      "question": "Что выведет TypeScript-ошибку в этом коде?",
+      "code": "interface Settings { theme: string; }\nconst s: Readonly<Settings> = { theme: 'dark' };\ns.theme = 'light';",
+      "options": [
+        "Ошибки не будет, всё скомпилируется",
+        "Ошибка: Cannot assign to 'theme' because it is a read-only property",
+        "Ошибка: theme is not defined",
+        "Ошибка: Settings is not a valid type"
+      ],
+      "answer": 1,
+      "explain": "Readonly делает все поля объекта доступными только для чтения, поэтому присваивание вызовет ошибку компиляции."
+    },
+    {
+      "type": "choice",
+      "question": "Нужно вернуть клиенту данные пользователя, но без поля passwordHash. Какой вариант чище всего в реальном проекте?",
+      "code": "interface User { id: string; email: string; passwordHash: string; }",
+      "options": [
+        "Создать новый interface UserResponse вручную с двумя полями",
+        "type UserResponse = Omit<User, 'passwordHash'>",
+        "type UserResponse = Partial<User>",
+        "Использовать any и удалить поле в рантайме"
+      ],
+      "answer": 1,
+      "explain": "Omit убирает конкретное поле из типа, автоматически подхватывая изменения, если User расширится новыми полями."
+    },
+    {
+      "type": "choice",
+      "question": "Что делает Record<'admin' | 'user', number>?",
+      "options": [
+        "Создаёт union из двух чисел",
+        "Создаёт объектный тип с ключами 'admin' и 'user', значения которых — number",
+        "Создаёт массив чисел с двумя элементами",
+        "Создаёт enum с двумя значениями"
+      ],
+      "answer": 1,
+      "explain": "Record<Keys, Type> строит объектный тип, где перечисленные ключи имеют указанный тип значения."
+    },
+    {
+      "type": "choice",
+      "question": "Есть функция async function getUser(): Promise<{id: string}>. Как правильно получить тип {id: string} (не Promise), не переписывая его руками?",
+      "options": [
+        "type T = ReturnType<typeof getUser>",
+        "type T = Awaited<ReturnType<typeof getUser>>",
+        "type T = Parameters<typeof getUser>",
+        "type T = Partial<typeof getUser>"
+      ],
+      "answer": 1,
+      "explain": "ReturnType даст Promise<{id: string}>, а Awaited развернёт Promise и оставит только {id: string}."
+    },
+    {
+      "type": "code",
+      "task": "Дан interface Article с полями id, title, content, authorId, createdAt. Опиши три типа: ArticleDraft — все поля опциональны (для черновика при создании), ArticlePreview — только id, title и authorId (для списка статей), и ArticleImmutable — все поля только для чтения (для кэша).",
+      "starter": "interface Article {\n  id: string;\n  title: string;\n  content: string;\n  authorId: string;\n  createdAt: Date;\n}\n\n// напиши типы ниже\ntype ArticleDraft = /* твой код */;\ntype ArticlePreview = /* твой код */;\ntype ArticleImmutable = /* твой код */;",
+      "hint": "Вспомни, что Partial делает поля опциональными, Pick выбирает конкретные поля через объединение строковых литералов ('a' | 'b'), а Readonly запрещает изменение полей."
+    }
+  ]
+}

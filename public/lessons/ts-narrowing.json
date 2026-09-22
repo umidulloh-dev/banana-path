@@ -1,0 +1,99 @@
+{
+  "intro": {
+    "why": "Когда данные могут прийти в разных формах (например, ответ API может быть успехом или ошибкой), нужен способ сказать TypeScript: 'это одно ИЛИ другое'. Union types решают проблему, что реальные данные редко бывают одного строгого типа — они варьируются в зависимости от ситуации.",
+    "where": "Это встречается при разборе тела запроса в Express (поле может быть string или number), при обработке ответа стороннего API (успех/ошибка), при работе с событиями Telegraf (текст, фото, стикер — разные структуры), в состоянии React-компонента (loading/success/error).",
+    "without": "Без union и narrowing придётся либо ставить any и терять всю подсказку редактора, либо писать кучу проверок 'на глаз', которые TS не проверяет. В рантайме вылезет TypeError вроде 'cannot read property of undefined', потому что код обратился к полю, которого нет в этой ветке данных.",
+    "analogy": "Это как посылка, которая может прийти либо письмом, либо бандеролью — прежде чем её открыть, нужно посмотреть на упаковку и понять, с чем ты имеешь дело."
+  },
+  "cards": [
+    {
+      "title": "Union type",
+      "text": "Union — это тип, который говорит: значение может быть одним ИЗ нескольких вариантов. Записывается через `|`. TS не даст использовать поле, которого нет во всех вариантах, пока ты не сузишь тип.",
+      "code": "type Id = string | number;\n\nfunction printId(id: Id) {\n  console.log(id);\n}"
+    },
+    {
+      "title": "Narrowing: typeof, in, instanceof",
+      "text": "Narrowing — это сужение union до конкретного типа внутри if. `typeof` подходит для примитивов (string, number, boolean). `in` проверяет наличие свойства в объекте. `instanceof` проверяет, что значение создано конкретным классом (например, Error).",
+      "code": "function handle(value: string | number) {\n  if (typeof value === 'string') {\n    console.log(value.toUpperCase());\n  } else {\n    console.log(value.toFixed(2));\n  }\n}"
+    },
+    {
+      "title": "Discriminated union",
+      "text": "Это union из объектов с общим полем-«меткой» (обычно `kind` или `type`), по которому легко и безопасно понять, какой это вариант. TS сам сузит тип после проверки этого поля — это самый надёжный паттерн в реальных проектах.",
+      "code": "type Result =\n  | { status: 'success'; data: string }\n  | { status: 'error'; message: string };\n\nfunction show(r: Result) {\n  if (r.status === 'success') {\n    console.log(r.data);\n  } else {\n    console.log(r.message);\n  }\n}"
+    },
+    {
+      "title": "Свой type guard",
+      "text": "Иногда проверка сложнее, чем typeof/in. Тогда пишут функцию-предикат с возвращаемым типом `value is Type`. После вызова такой функции в if TS сужает тип автоматически, как будто это встроенная проверка.",
+      "code": "interface Cat { meow(): void }\ninterface Dog { bark(): void }\n\nfunction isCat(a: Cat | Dog): a is Cat {\n  return 'meow' in a;\n}\n\nfunction speak(a: Cat | Dog) {\n  if (isCat(a)) a.meow();\n  else a.bark();\n}"
+    }
+  ],
+  "tasks": [
+    {
+      "type": "choice",
+      "question": "Что такое union type простыми словами?",
+      "options": [
+        "Тип, объединяющий несколько интерфейсов через наследование",
+        "Значение, которое может быть одним из нескольких перечисленных типов",
+        "Массив значений разных типов",
+        "Способ объявить переменную без указания типа"
+      ],
+      "answer": 1,
+      "explain": "Union (через `|`) означает 'один из этих типов', а не объединение структур наследованием."
+    },
+    {
+      "type": "choice",
+      "question": "Какой оператор narrowing лучше всего подходит для проверки примитивов вроде string и number?",
+      "options": [
+        "instanceof",
+        "in",
+        "typeof",
+        "as"
+      ],
+      "answer": 2,
+      "explain": "typeof работает с примитивами (string, number, boolean, undefined и т.д.), а instanceof — с классами."
+    },
+    {
+      "type": "choice",
+      "question": "Что выведет TS-ошибку в этом коде?",
+      "code": "function log(value: string | number) {\n  console.log(value.toUpperCase());\n}",
+      "options": [
+        "Ошибки не будет, всё скомпилируется",
+        "Ошибка: toUpperCase не существует на типе number (в union без narrowing)",
+        "Ошибка: value должен быть указан как any",
+        "Ошибка синтаксиса в объявлении union"
+      ],
+      "answer": 1,
+      "explain": "TS не даст вызвать метод, которого нет у одного из вариантов union, пока не сузишь тип проверкой typeof."
+    },
+    {
+      "type": "choice",
+      "question": "У тебя есть discriminated union `{kind:'circle', radius}` | `{kind:'square', side}`. Как правильно проверить, какой это вариант, внутри функции?",
+      "options": [
+        "if (shape instanceof circle)",
+        "if ('radius' in shape) — единственный правильный способ",
+        "if (shape.kind === 'circle') { ... используем shape.radius ... }",
+        "Проверка не нужна, TS сам разберётся без if"
+      ],
+      "answer": 2,
+      "explain": "Discriminated union специально создан для проверки по полю-метке (kind), после чего TS сам сужает тип в этой ветке."
+    },
+    {
+      "type": "choice",
+      "question": "Зачем писать собственный type guard (функцию с `value is Type`), если есть typeof/in/instanceof?",
+      "options": [
+        "Просто для красоты кода, функционально разницы нет",
+        "Когда логика проверки сложнее одной простой проверки, и хочется переиспользовать её с сужением типа",
+        "Потому что typeof не работает в TypeScript",
+        "Чтобы обойти строгий режим компилятора"
+      ],
+      "answer": 1,
+      "explain": "Кастомный type guard нужен, когда проверка комплексная (несколько условий), а результат всё равно должен сужать тип для TS."
+    },
+    {
+      "type": "code",
+      "task": "Напиши функцию processEvent, которая принимает discriminated union из двух вариантов события Telegram-бота: { type: 'text'; content: string } и { type: 'photo'; fileId: string }. Функция должна вывести в консоль текст сообщения для 'text' и file id для 'photo', используя narrowing по полю type.",
+      "starter": "type BotEvent =\n  | { type: 'text'; content: string }\n  | { type: 'photo'; fileId: string };\n\nfunction processEvent(event: BotEvent) {\n  // твой код здесь\n}",
+      "hint": "Сделай if/else (или switch) по event.type — после проверки TS сам сузит тип и разрешит обратиться к content или fileId."
+    }
+  ]
+}

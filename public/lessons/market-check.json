@@ -1,0 +1,115 @@
+{
+  "cards": [],
+  "tasks": [
+    {
+      "type": "choice",
+      "question": "Что выведет этот код?",
+      "code": "console.log('start');\nsetTimeout(() => console.log('timeout'), 0);\nPromise.resolve().then(() => console.log('promise'));\nconsole.log('end');",
+      "options": [
+        "start, end, promise, timeout",
+        "start, promise, end, timeout",
+        "start, end, timeout, promise",
+        "promise, start, end, timeout"
+      ],
+      "answer": 0,
+      "explain": "Синхронный код выполняется первым (start, end), затем microtask-очередь (promise), и только потом macrotask-очередь (timeout)."
+    },
+    {
+      "type": "choice",
+      "question": "В чём разница между interface и type в TypeScript, которая чаще всего важна на практике?",
+      "code": "",
+      "options": [
+        "interface нельзя использовать для объектов, только type",
+        "type можно объединять через union и intersection, а interface поддерживает declaration merging",
+        "interface работает только в классах",
+        "type компилируется в JS, а interface — нет"
+      ],
+      "answer": 1,
+      "explain": "type удобен для union/intersection типов, а interface можно расширять через повторное объявление (declaration merging), что полезно для библиотек."
+    },
+    {
+      "type": "choice",
+      "question": "Какой индекс в MongoDB/SQL стоит создать для ускорения запроса `WHERE user_id = ? ORDER BY created_at DESC`?",
+      "code": "",
+      "options": [
+        "Индекс только на created_at",
+        "Составной индекс (user_id, created_at)",
+        "Индекс не нужен, если таблица маленькая",
+        "Уникальный индекс на id"
+      ],
+      "answer": 1,
+      "explain": "Составной индекс позволяет сначала быстро найти нужные строки по user_id, а затем отдать их уже отсортированными по created_at без дополнительной сортировки."
+    },
+    {
+      "type": "choice",
+      "question": "Какой самый надёжный способ защититься от NoSQL/SQL-инъекций в Express API?",
+      "code": "",
+      "options": [
+        "Экранировать кавычки вручную в строках",
+        "Использовать параметризованные запросы/ORM и валидацию входных данных",
+        "Отключить логирование ошибок",
+        "Использовать только POST-запросы"
+      ],
+      "answer": 1,
+      "explain": "Параметризованные запросы и валидация (например, через Zod/Joi) исключают возможность внедрения вредоносного кода через пользовательский ввод."
+    },
+    {
+      "type": "choice",
+      "question": "Найди ошибку в этом TypeScript коде:",
+      "code": "function getUser(id: string): User {\n  const user = database.find(id);\n  return user;\n}",
+      "options": [
+        "Тип возвращаемого значения должен быть User | undefined, так как find может не найти запись",
+        "Функция должна быть async",
+        "id должен быть типа number",
+        "Ошибки нет"
+      ],
+      "answer": 0,
+      "explain": "Метод поиска обычно может вернуть undefined, если запись не найдена, поэтому тип должен это отражать, иначе компилятор скрывает потенциальный баг."
+    },
+    {
+      "type": "choice",
+      "question": "Как правильно организовать rate limiting и хранение refresh-токенов в масштабируемом API?",
+      "code": "",
+      "options": [
+        "Хранить всё в памяти процесса Node.js",
+        "Использовать Redis для счётчиков и хранения токенов, чтобы данные были доступны всем инстансам",
+        "Хранить токены в localStorage на сервере",
+        "Использовать глобальную переменную в модуле"
+      ],
+      "answer": 1,
+      "explain": "При горизонтальном масштабировании несколько инстансов Node.js не имеют общей памяти, поэтому для rate limiting и токенов нужно внешнее хранилище вроде Redis."
+    },
+    {
+      "type": "choice",
+      "question": "Answer in English: What is the main purpose of a message queue (e.g. RabbitMQ, Kafka) in system design?",
+      "code": "",
+      "options": [
+        "To store user sessions permanently",
+        "To decouple services and handle asynchronous processing with load buffering",
+        "To replace a database entirely",
+        "To speed up synchronous HTTP requests"
+      ],
+      "answer": 1,
+      "explain": "Message queues allow producers and consumers to work independently, buffering load and enabling retries, which improves resilience and scalability."
+    },
+    {
+      "type": "choice",
+      "question": "При проектировании URL shortener, какой подход к генерации коротких ссылок наиболее масштабируем?",
+      "code": "",
+      "options": [
+        "Хранить счётчик в одной глобальной переменной на сервере",
+        "Использовать base62-кодирование от уникального ID из распределённого генератора (например, Snowflake) или диапазонов ID из БД",
+        "Генерировать случайные строки и надеяться на отсутствие коллизий без проверки",
+        "Хешировать URL через MD5 и обрезать до 6 символов без проверки коллизий"
+      ],
+      "answer": 1,
+      "explain": "Распределённый генератор ID или выделение диапазонов ID разным инстансам гарантирует уникальность без единой точки отказа и позволяет масштабироваться горизонтально."
+    },
+    {
+      "type": "code",
+      "task": "Напиши middleware для Express на TypeScript, который: 1) проверяет JWT из заголовка Authorization (Bearer token), 2) в случае невалидного токена возвращает 401, 3) ограничивает частоту запросов для одного user_id не более 5 запросов в 10 секунд, используя простое in-memory хранилище (Map). Учти, что решение — временное (для продакшена нужен Redis), это укажи в комментарии.",
+      "starter": "import { Request, Response, NextFunction } from 'express';\nimport jwt from 'jsonwebtoken';\n\ninterface AuthRequest extends Request {\n  userId?: string;\n}\n\nconst requestLog = new Map<string, number[]>();\n\nexport function authAndRateLimit(req: AuthRequest, res: Response, next: NextFunction) {\n  // 1. Извлеки токен из заголовка Authorization\n  // 2. Верифицируй через jwt.verify, при ошибке — 401\n  // 3. Сохрани userId в req.userId\n  // 4. Проверь количество запросов за последние 10 секунд в requestLog\n  // 5. Если больше 5 — верни 429\n  // 6. Иначе добавь текущий timestamp и вызови next()\n}\n",
+      "hint": "Используй Date.now() для меток времени и фильтрацию массива timestamps, оставляя только те, что не старше 10000 мс. Не забудь про try/catch вокруг jwt.verify."
+    }
+  ]
+}

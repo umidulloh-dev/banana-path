@@ -60,6 +60,28 @@ flowchart LR
 The API key never reaches the browser, and every `/api/*` route sits behind a
 global auth guard.
 
+### The lesson pack
+
+Lessons do not change between openings, so regenerating them per visit would
+spend credits on identical content. They are built once into
+`public/lessons/<node-id>.json` and served as static files: opening a lesson is
+instant and costs nothing. The model is reserved for what is actually
+per-student — reviewing the code you submit, and the mentor chat.
+
+```bash
+node scripts/build-lessons.mjs --base https://<host> --password <APP_PASSWORD>
+node scripts/build-lessons.mjs --dry-run          # list what would be built
+node scripts/build-lessons.mjs --only ts-generics # rebuild one topic
+```
+
+The script reads `UNITS` and `lessonPrompt` straight out of `public/index.html`
+rather than restating them, so the pack cannot drift from what the app itself
+would have asked for. It validates every answer the way the frontend does, skips
+lessons already on disk, and is safe to rerun after a failure.
+
+A node with no file in the pack still works — the app falls back to generating
+it live, so the roadmap can grow before the pack catches up.
+
 ### Request lifecycle of a generated lesson
 
 1. The learner taps a node; the frontend calls `sample.json(lessonPrompt(...))`.
@@ -120,6 +142,13 @@ Run these from `server/`:
 | `npm test` | Unit tests (JSON extractor, rate limiter) |
 | `npm run test:e2e` | End-to-end tests (needs PostgreSQL for one of the two suites) |
 | `npm run prisma:migrate` | Create a new migration from the schema |
+
+Building the lesson pack runs from the repository root, not `server/`:
+
+| Command | What it does |
+| --- | --- |
+| `node scripts/build-lessons.mjs --dry-run` | Show which lessons are missing |
+| `node scripts/build-lessons.mjs --base <url> --password <pw>` | Build the missing ones |
 
 ---
 

@@ -1,0 +1,98 @@
+{
+  "intro": {
+    "why": "Когда файл или ответ API весит гигабайты, нельзя просто загрузить всё в память — сервер упадёт по OOM. Streams придумали, чтобы обрабатывать данные кусками (chunks) по мере поступления, не дожидаясь полной загрузки. Это решает проблему памяти и позволяет начать работу с данными раньше.",
+    "where": "В Express `req` и `res` — это streams, поэтому можно стримить загрузку файлов клиенту без буферизации. В Node ты встретишь их при чтении больших логов (`fs.createReadStream`), при проксировании HTTP-ответов, при архивации файлов (`zlib`), при работе с видео/аудио.",
+    "without": "Без стримов ты будешь читать файл целиком через `fs.readFile`, и на файле 2ГБ процесс упадёт с `JavaScript heap out of memory`. Ты не заметишь, что медленный клиент (backpressure) заставляет сервер копить данные в памяти, пока не рухнет. Придётся вручную писать логику чанкования, которую стримы уже решили за тебя.",
+    "analogy": "Это как пить через трубочку маленькими глотками вместо того, чтобы пытаться проглотить целый бассейн воды разом."
+  },
+  "cards": [
+    {
+      "title": "Readable, Writable, Transform",
+      "text": "**Readable** — источник данных (файл, HTTP-запрос). **Writable** — приёмник (файл, HTTP-ответ). **Transform** — читает, преобразует и пишет дальше (например, `zlib.createGzip()`). Все они работают с данными по частям (chunks), а не целиком.",
+      "code": "const fs = require('fs');\nconst readable = fs.createReadStream('input.txt');\nconst writable = fs.createWriteStream('output.txt');\nreadable.on('data', chunk => writable.write(chunk));"
+    },
+    {
+      "title": "pipeline вместо .pipe()",
+      "text": "`pipeline()` из модуля `stream` соединяет несколько стримов и **автоматически обрабатывает ошибки и закрытие**. Старый `.pipe()` не пробрасывает ошибки корректно — если один стрим упадёт, остальные останутся висеть. Всегда используй `pipeline`, а не ручной `.pipe()`.",
+      "code": "const { pipeline } = require('stream/promises');\nawait pipeline(\n  fs.createReadStream('in.txt'),\n  zlib.createGzip(),\n  fs.createWriteStream('in.txt.gz')\n);"
+    },
+    {
+      "title": "Backpressure",
+      "text": "Если Writable не успевает записывать данные быстрее, чем Readable их отдаёт, буфер переполняется — это и есть backpressure. `stream.write()` возвращает `false`, когда буфер полон, и тогда нужно ждать событие `drain` перед следующей записью. `pipeline`/`pipe` делают это автоматически, ручной цикл `write` — нет.",
+      "code": "if (!writable.write(chunk)) {\n  readable.pause();\n  writable.once('drain', () => readable.resume());\n}"
+    },
+    {
+      "title": "Большие файлы = стримы, а не readFile",
+      "text": "Для файлов, которые могут быть большими (логи, экспорт CSV, видео), никогда не используй `fs.readFile` — он грузит всё в память. Используй `createReadStream` + `pipeline`, чтобы обрабатывать файл по частям, независимо от его размера."
+    }
+  ],
+  "tasks": [
+    {
+      "type": "choice",
+      "question": "Почему `fs.readFile('big.log')` может уронить сервер на большом файле?",
+      "options": [
+        "Потому что метод асинхронный",
+        "Потому что весь файл загружается в память целиком, буфер может превысить лимит памяти",
+        "Потому что readFile работает только с текстовыми файлами",
+        "Потому что readFile не поддерживает кодировку utf-8"
+      ],
+      "answer": 1,
+      "explain": "readFile буферизует весь файл в памяти перед тем как вернуть результат, поэтому большие файлы могут вызвать переполнение heap."
+    },
+    {
+      "type": "choice",
+      "question": "Что такое backpressure?",
+      "options": [
+        "Ошибка компиляции TypeScript в стримах",
+        "Ситуация, когда Writable-стрим не успевает обрабатывать данные быстрее, чем их отдаёт Readable",
+        "Способ сжатия данных в Transform-стриме",
+        "Механизм автоматического закрытия файлов"
+      ],
+      "answer": 1,
+      "explain": "Backpressure возникает, когда потребитель данных медленнее источника, и буфер записи переполняется."
+    },
+    {
+      "type": "choice",
+      "question": "Какая проблема есть у `.pipe()` по сравнению с `pipeline()`?",
+      "options": [
+        "`.pipe()` не умеет работать с Transform-стримами",
+        "`.pipe()` медленнее в 10 раз",
+        "`.pipe()` не пробрасывает ошибки корректно и не закрывает все стримы при сбое",
+        "`.pipe()` устарел и удалён из Node.js"
+      ],
+      "answer": 2,
+      "explain": "pipeline() автоматически обрабатывает ошибки и корректно закрывает (destroy) все стримы в цепочке, чего .pipe() не делает."
+    },
+    {
+      "type": "choice",
+      "question": "Что выведет `writable.write(chunk)`, если внутренний буфер переполнен?",
+      "code": "const ok = writable.write(chunk);\nconsole.log(ok);",
+      "options": [
+        "true",
+        "undefined",
+        "false",
+        "выбросит исключение"
+      ],
+      "answer": 2,
+      "explain": "write() возвращает false, когда буфер переполнен — сигнал приостановить запись до события 'drain'."
+    },
+    {
+      "type": "choice",
+      "question": "Какой стрим правильно выбрать, чтобы сжать файл gzip'ом на лету между чтением и записью?",
+      "options": [
+        "Readable",
+        "Writable",
+        "Duplex без реализации методов",
+        "Transform"
+      ],
+      "answer": 3,
+      "explain": "Transform-стрим (например, zlib.createGzip()) читает данные, трансформирует их и передаёт дальше по цепочке pipeline."
+    },
+    {
+      "type": "code",
+      "task": "Напиши функцию, которая читает файл 'input.txt', сжимает его gzip'ом и записывает результат в 'input.txt.gz', используя pipeline и обработку ошибок.",
+      "starter": "const fs = require('fs');\nconst zlib = require('zlib');\nconst { pipeline } = require('stream/promises');\n\nasync function compressFile() {\n  // твой код здесь\n}\n\ncompressFile();",
+      "hint": "Собери три стрима в массив аргументов pipeline: createReadStream, zlib.createGzip(), createWriteStream — и оберни вызов в try/catch, так как pipeline возвращает Promise."
+    }
+  ]
+}

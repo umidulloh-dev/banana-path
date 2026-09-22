@@ -1,0 +1,113 @@
+{
+  "cards": [],
+  "tasks": [
+    {
+      "type": "choice",
+      "question": "Как правильно передать системную инструкцию модели через OpenAI SDK в Node.js?",
+      "code": "const userMsg = 'Переведи на английский: Привет';\nconst sys = 'Ты профессиональный переводчик, отвечай только переводом без пояснений.';\n\nconst response = await openai.chat.completions.create({\n  model: 'gpt-4o-mini',\n  messages: [ /* ??? */ ]\n});",
+      "options": [
+        "messages: [{role:'system', content: sys}, {role:'user', content: userMsg}]",
+        "messages: [{role:'user', content: sys}, {role:'user', content: userMsg}]",
+        "systemPrompt: sys, messages: [{role:'user', content: userMsg}]",
+        "messages: [{role:'assistant', content: sys}, {role:'user', content: userMsg}]"
+      ],
+      "answer": 0,
+      "explain": "Роль 'system' — специальный тип сообщения, который задаёт поведение модели на весь диалог и имеет приоритет над user-сообщениями."
+    },
+    {
+      "type": "choice",
+      "question": "Сервер стримит ответ через SSE в Express. Что нужно добавить, чтобы прервать генерацию, если клиент закрыл соединение (например, обновил страницу)?",
+      "code": "app.get('/stream', async (req, res) => {\n  res.setHeader('Content-Type', 'text/event-stream');\n  const stream = await openai.chat.completions.create({\n    model: 'gpt-4o-mini',\n    messages: [...],\n    stream: true\n  });\n  for await (const chunk of stream) {\n    res.write(`data: ${chunk.choices[0].delta.content}\\n\\n`);\n  }\n  res.end();\n});",
+      "options": [
+        "Ничего, Node сам остановит генерацию при закрытии соединения",
+        "Использовать setTimeout для принудительного закрытия через 30 секунд",
+        "Добавить res.end() внутри цикла for await",
+        "Добавить req.on('close', () => controller.abort()) и передать controller.signal в запрос к OpenAI"
+      ],
+      "answer": 3,
+      "explain": "Только явная отмена через AbortController остановит запрос к API при разрыве соединения клиентом; без этого генерация продолжится впустую и будет оплачена."
+    },
+    {
+      "type": "choice",
+      "question": "Почему этот код ненадёжен для structured output?",
+      "code": "const schema = z.object({ name: z.string(), age: z.number() });\n\nconst response = await openai.chat.completions.create({\n  model: 'gpt-4o-mini',\n  messages: [{ role: 'user', content: 'Верни JSON с именем и возрастом' }]\n});\n\nconst data = JSON.parse(response.choices[0].message.content);\nconsole.log(data.age.toFixed(2));",
+      "options": [
+        "JSON.parse всегда бросает исключение",
+        "toFixed нельзя вызывать на числах",
+        "Модель может вернуть текст не в формате JSON или с лишними/неверными полями, а без schema.parse(data) ошибка типов не будет обнаружена",
+        "OpenAI не поддерживает JSON-ответы"
+      ],
+      "answer": 2,
+      "explain": "Без валидации через zod (schema.parse) и без response_format/structured output режима нет гарантии, что ответ модели соответствует ожидаемой структуре."
+    },
+    {
+      "type": "choice",
+      "question": "Модель text-embedding-3-large возвращает вектор размерности 3072, но колонка в PostgreSQL объявлена как vector(1536). Что произойдёт при вставке такого эмбеддинга?",
+      "code": "CREATE TABLE docs (\n  id serial PRIMARY KEY,\n  content text,\n  embedding vector(1536)\n);\n\n-- INSERT INTO docs (content, embedding) VALUES ($1, $2), где $2 — массив из 3072 чисел",
+      "options": [
+        "Postgres автоматически обрежет вектор до 1536 измерений",
+        "Вставка завершится ошибкой несоответствия размерности",
+        "pgvector автоматически расширит колонку до нужного размера",
+        "Значение сохранится, но поиск по сходству будет работать некорректно"
+      ],
+      "answer": 1,
+      "explain": "pgvector строго проверяет размерность вектора при вставке и вернёт ошибку, если она не совпадает с объявленной в схеме таблицы."
+    },
+    {
+      "type": "choice",
+      "question": "Какая стратегия чанкинга обычно даёт лучшие результаты для RAG над технической документацией?",
+      "options": [
+        "Разбивать по смысловым блокам (абзацы/секции) с небольшим overlap между чанками",
+        "Разбивать текст строго по 100 символов без учёта границ предложений",
+        "Не разбивать вообще, индексировать весь документ как один чанк",
+        "Разбивать по одному слову на чанк для максимальной точности"
+      ],
+      "answer": 0,
+      "explain": "Чанки по смысловым границам с overlap сохраняют контекст и повышают релевантность поиска, не теряя связность и не создавая слишком общий или слишком мелкий контекст."
+    },
+    {
+      "type": "choice",
+      "question": "Что не так с этим кодом при использовании tool use у Anthropic Claude?",
+      "code": "const response = await client.messages.create({\n  model: 'claude-3-5-sonnet-20241022',\n  tools: [weatherTool],\n  messages: [{ role: 'user', content: 'Какая погода в Ташкенте?' }]\n});\n\nconsole.log(response.content[0].text);",
+      "options": [
+        "Claude не поддерживает tools вообще",
+        "tools нужно передавать внутри messages, а не отдельным параметром",
+        "Model должен быть gpt-4, а не claude",
+        "Нужно проверять stop_reason === 'tool_use', выполнять инструмент и отправлять результат обратно в новом сообщении, а не просто читать content[0].text"
+      ],
+      "answer": 3,
+      "explain": "Tool use — это цикл: модель просит вызвать инструмент (stop_reason='tool_use'), код выполняет его и отправляет tool_result обратно, только после этого получается финальный текстовый ответ."
+    },
+    {
+      "type": "choice",
+      "question": "Какая проблема возникнет при долгом использовании такого Telegram-бота одним пользователем?",
+      "code": "bot.on('message:text', async (ctx) => {\n  history.push({ role: 'user', content: ctx.message.text });\n  const res = await callLLM(history);\n  history.push({ role: 'assistant', content: res });\n  ctx.reply(res);\n});",
+      "options": [
+        "grammY автоматически ограничивает историю",
+        "Telegram не позволяет хранить историю на сервере",
+        "История будет расти бесконечно и в какой-то момент превысит лимит контекста модели, увеличивая стоимость запросов",
+        "Проблем нет, LLM API сам обрезает лишние сообщения"
+      ],
+      "answer": 2,
+      "explain": "Без ограничения (sliding window, суммаризации или лимита сообщений) история будет расти без границ, что приведёт к ошибкам превышения контекста и росту стоимости каждого запроса."
+    },
+    {
+      "type": "choice",
+      "question": "Как правильно хранить и использовать API-ключи OpenAI/Anthropic в Node.js-проекте?",
+      "options": [
+        "Хранить ключ прямо в коде для удобства деплоя",
+        "Хранить в .env, добавить .env в .gitignore, загружать через dotenv/process.env и не логировать ключ",
+        "Отправлять ключ с фронтенда в каждом запросе к своему backend",
+        "Хранить ключ в localStorage браузера"
+      ],
+      "answer": 1,
+      "explain": "Ключ должен оставаться только на сервере и не попадать в git-репозиторий, логи или клиентский код, иначе его легко скомпрометировать."
+    },
+    {
+      "type": "code",
+      "task": "Реализуй упрощённый RAG-эндпоинт на Express + zod. Функция должна: 1) получить эмбеддинг вопроса пользователя, 2) найти топ-3 похожих чанка через pgvector (используй уже готовую функцию findSimilarChunks), 3) собрать системный промпт с контекстом из найденных чанков, 4) вызвать LLM и распарсить JSON-ответ вида {answer: string, sources: string[]} через zod-схему, 5) при ошибке валидации сделать один повторный запрос (ретрай), иначе вернуть 500.",
+      "starter": "import { z } from 'zod';\nimport express from 'express';\nimport { getEmbedding, findSimilarChunks, callLLM } from './ai';\n\nconst app = express();\napp.use(express.json());\n\nconst AnswerSchema = z.object({\n  answer: z.string(),\n  sources: z.array(z.string())\n});\n\napp.post('/ask', async (req, res) => {\n  const { question } = req.body;\n\n  // TODO 1: получить эмбеддинг вопроса через getEmbedding(question)\n\n  // TODO 2: найти похожие чанки через findSimilarChunks(embedding, 3)\n\n  // TODO 3: собрать системный промпт с контекстом из чанков\n  // (объясни модели, что нужно вернуть строго JSON вида {answer, sources})\n\n  // TODO 4: вызвать callLLM(systemPrompt, question), распарсить JSON\n  // и провалидировать через AnswerSchema.safeParse\n\n  // TODO 5: если валидация не прошла — сделать один повторный вызов callLLM,\n  // если снова неудача — res.status(500).json({ error: 'Invalid AI response' })\n\n  // При успехе — res.json(result)\n});\n\nexport default app;",
+      "hint": "Используй AnswerSchema.safeParse(data) вместо schema.parse, чтобы не ловить исключение, а получить { success, data } или { success: false } и по этому флагу решить — делать ретрай или отдавать 500."
+    }
+  ]
+}

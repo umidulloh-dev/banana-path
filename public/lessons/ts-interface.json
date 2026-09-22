@@ -1,0 +1,101 @@
+{
+  "intro": {
+    "why": "Когда ты описываешся форму объекта (например, что должно быть в body запроса или в ответе от API), TypeScript нужен способ зафиксировать этот 'контракт' — какие поля есть, какого они типа, обязательные они или нет. Без этого ты просто передаёшь any-объекты и ловишь баги в проде, когда забыл поле или опечатался в имени.",
+    "where": "Interface и type встречаются везде: при описании body в Express-хендлере, при типизации ответа от сторонних API (например, ответ Telegram Bot API), в моделях MongoDB-документов, в пропсах React-компонентов и в конфиге приложения (env, настройки).",
+    "without": "Без interface/type редактор не подскажет автодополнение полей объекта, а опечатку в имени поля (user.emial вместо user.email) ты узнаешь только в runtime, когда упадёт продакшн. Рефакторинг станет страшным: изменил структуру объекта в одном месте — не узнаешь, что сломалось в десяти других.",
+    "analogy": "Interface — это как бланк анкеты: заранее понятно, какие поля обязательны, какие можно пропустить, и никто не впишет туда чушь вместо нужного формата."
+  },
+  "cards": [
+    {
+      "title": "Зачем interface",
+      "text": "**interface** описывает форму объекта: какие поля есть и какого они типа. Это контракт — TS проверяет, что объект ему соответствует, и подсказывает автодополнение в IDE.",
+      "code": "interface User {\n  id: number;\n  name: string;\n}\n\nconst u: User = { id: 1, name: 'Umid' };"
+    },
+    {
+      "title": "Опциональные и readonly поля",
+      "text": "Знак `?` делает поле необязательным, `readonly` запрещает менять поле после создания объекта. Это помогает описать реальные ситуации: не все поля всегда приходят с сервера, а некоторые (например, id) не должны меняться.",
+      "code": "interface User {\n  readonly id: number;\n  name: string;\n  age?: number;\n}\n\nconst u: User = { id: 1, name: 'Umid' };\n// u.id = 2; // Ошибка"
+    },
+    {
+      "title": "type vs interface",
+      "text": "**type** — это псевдоним для любого типа (объект, union, примитив, функция). **interface** — только для описания формы объектов (и может 'дополняться' через declaration merging). На практике для простых объектов разницы почти нет, но type гибче для union-типов.",
+      "code": "type Status = 'active' | 'blocked';\ntype Point = { x: number; y: number };\ninterface Point2 { x: number; y: number; }"
+    },
+    {
+      "title": "Расширение и пересечение",
+      "text": "interface расширяется через `extends`, type объединяется через `&` (пересечение). Оба способа позволяют собирать сложные типы из простых, не дублируя код.",
+      "code": "interface Animal { name: string; }\ninterface Dog extends Animal { breed: string; }\n\ntype WithId = { id: number };\ntype UserWithId = WithId & { name: string };"
+    }
+  ],
+  "tasks": [
+    {
+      "type": "choice",
+      "question": "Что делает символ `?` перед типом поля в interface?",
+      "code": "interface User {\n  age?: number;\n}",
+      "options": [
+        "Делает поле обязательным",
+        "Делает поле опциональным (может отсутствовать)",
+        "Делает поле readonly",
+        "Указывает, что поле — union-тип"
+      ],
+      "answer": 1,
+      "explain": "`?` означает, что поле может быть не указано в объекте."
+    },
+    {
+      "type": "choice",
+      "question": "Что произойдёт при попытке выполнить этот код?",
+      "code": "interface Config {\n  readonly apiKey: string;\n}\n\nconst cfg: Config = { apiKey: 'abc' };\ncfg.apiKey = 'xyz';",
+      "options": [
+        "Код скомпилируется и выполнится без ошибок",
+        "TypeScript выдаст ошибку компиляции — readonly поле нельзя менять",
+        "Ошибка возникнет только в runtime",
+        "apiKey автоматически станет опциональным"
+      ],
+      "answer": 1,
+      "explain": "readonly запрещает изменение поля после инициализации, TS ловит это на этапе компиляции."
+    },
+    {
+      "type": "choice",
+      "question": "В чём главное отличие type от interface для описания объектов?",
+      "options": [
+        "type нельзя использовать для объектов вообще",
+        "interface нельзя расширять",
+        "type — псевдоним для любого типа (включая union), interface — только для форм объектов и поддерживает declaration merging",
+        "Они полностью идентичны и никогда не отличаются"
+      ],
+      "answer": 2,
+      "explain": "type универсальнее (подходит для union, примитивов, функций), а interface заточен под объекты и умеет 'сливаться' при повторном объявлении."
+    },
+    {
+      "type": "choice",
+      "question": "Найди ошибку в этом коде:",
+      "code": "interface User {\n  id: number;\n  name: string;\n}\n\nconst u: User = { id: 1 };",
+      "options": [
+        "Ошибки нет, код корректен",
+        "Отсутствует обязательное поле name",
+        "id должно быть строкой",
+        "interface нельзя использовать с const"
+      ],
+      "answer": 1,
+      "explain": "Поле name обязательное (без `?`), но не передано — TS выдаст ошибку."
+    },
+    {
+      "type": "choice",
+      "question": "Ты пишешь Express-хендлер и хочешь типизировать req.body, который может быть либо формой регистрации, либо формой логина. Что удобнее использовать?",
+      "options": [
+        "interface с extends",
+        "type с union (`type Body = RegisterForm | LoginForm`)",
+        "Просто any",
+        "readonly поля"
+      ],
+      "answer": 1,
+      "explain": "Union-типы — это тип, который interface не умеет напрямую, поэтому здесь удобнее type."
+    },
+    {
+      "type": "code",
+      "task": "Опиши тип Product для товара интернет-магазина: id (number, readonly), title (string), price (number), discount (опциональное поле number). Создай объект product, соответствующий этому типу, без поля discount.",
+      "starter": "// Опиши interface Product здесь\n\nconst product = {\n  // заполни объект\n};",
+      "hint": "Используй readonly перед id и знак ? после discount, чтобы сделать поле опциональным."
+    }
+  ]
+}

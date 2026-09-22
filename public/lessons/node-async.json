@@ -1,0 +1,100 @@
+{
+  "intro": {
+    "why": "Когда код делает запрос к базе или API, ответ приходит не сразу — и JS не может просто «подождать», зависнув, потому что у него один поток. Промисы придумали, чтобы описать результат операции, которая случится в будущем, и красиво обработать его без вложенных callback'ов.",
+    "where": "Каждый запрос к MongoDB через mongoose, каждый fetch к внешнему API, чтение файла через fs.promises, отправка сообщения в Telegraf — всё это возвращает промис. Когда ты делаешь несколько независимых запросов одновременно (например, дёргаешь два разных API), тебе нужны Promise.all или allSettled.",
+    "without": "Без понимания состояний промиса ты будешь ловить UnhandledPromiseRejection и падения сервера в проде без единой строчки стектрейса в логах. Без Promise.all запросы будут идти по очереди, и там где можно было за 100мс, ты будешь ждать секунду. А забытый await превратит переменную в Promise<T> вместо T, и TS начнёт материться на несовместимые типы.",
+    "analogy": "Промис — это талон в очереди на почте: ты не стоишь и не ждёшь на месте, но у тебя есть бумажка, которая точно скажет, когда посылку выдадут или откажут."
+  },
+  "cards": [
+    {
+      "title": "Три состояния промиса",
+      "text": "Промис живёт в одном из трёх состояний: **pending** (ожидание), **fulfilled** (успешно выполнен, есть значение) и **rejected** (упал с ошибкой). Переход возможен только один раз и только вперёд — из pending в fulfilled или rejected, назад пути нет.",
+      "code": "const p = new Promise((resolve, reject) => {\n  setTimeout(() => resolve('done'), 1000);\n});\n// p: pending -> fulfilled('done')"
+    },
+    {
+      "title": "async/await — это просто синтаксис",
+      "text": "`async function` всегда возвращает промис, даже если внутри просто `return 5`. `await` приостанавливает выполнение функции до момента, когда промис разрешится, но не блокирует весь Node.js — другой код продолжает работать.",
+      "code": "async function getUser() {\n  const res = await fetch('/api/user');\n  const data = await res.json();\n  return data; // Promise<User>\n}"
+    },
+    {
+      "title": "Ошибки в async — это try/catch",
+      "text": "Если промис внутри async-функции падает (reject), это превращается в обычный throw. Ловить нужно **try/catch**, а не .catch() — хотя можно и его. Забытая обработка ошибки = падение процесса на необработанном rejection.",
+      "code": "async function safeFetch() {\n  try {\n    const res = await fetch('/api/data');\n    return await res.json();\n  } catch (err) {\n    console.error('Failed:', err);\n    throw err;\n  }\n}"
+    },
+    {
+      "title": "Параллельно vs последовательно",
+      "text": "`await` в цикле или подряд — это **последовательное** выполнение, каждый ждёт предыдущего. Чтобы запустить независимые операции **параллельно**, сначала создай промисы, потом await'ай их вместе через `Promise.all`.",
+      "code": "// медленно: 2+2=4 сек\nconst a = await task1();\nconst b = await task2();\n\n// быстро: 2 сек\nconst [x, y] = await Promise.all([task1(), task2()]);"
+    }
+  ],
+  "tasks": [
+    {
+      "type": "choice",
+      "question": "В чём разница между Promise.all и Promise.allSettled?",
+      "options": [
+        "Promise.all быстрее по производительности",
+        "Promise.all падает целиком при первой ошибке, allSettled ждёт все промисы и возвращает статус каждого",
+        "allSettled работает только с двумя промисами",
+        "Разницы нет, это синонимы"
+      ],
+      "answer": 1,
+      "explain": "Promise.all отбрасывается, как только один промис падает. allSettled всегда ждёт завершения всех и возвращает массив с status: 'fulfilled' или 'rejected' для каждого."
+    },
+    {
+      "type": "choice",
+      "question": "Что делает Promise.race?",
+      "options": [
+        "Возвращает результат самого быстрого из промисов (успех или ошибка)",
+        "Запускает промисы по очереди",
+        "Ждёт, пока все промисы выполнятся успешно",
+        "Отменяет все промисы кроме первого"
+      ],
+      "answer": 0,
+      "explain": "Promise.race разрешается или падает по первому промису, который завершится — неважно, успешно или с ошибкой."
+    },
+    {
+      "type": "choice",
+      "question": "Что выведет консоль?\n\nasync function run() {\n  console.log('1');\n  await Promise.resolve();\n  console.log('2');\n}\nrun();\nconsole.log('3');",
+      "code": "async function run() {\n  console.log('1');\n  await Promise.resolve();\n  console.log('2');\n}\nrun();\nconsole.log('3');",
+      "options": [
+        "1, 2, 3",
+        "1, 3, 2",
+        "3, 1, 2",
+        "2, 1, 3"
+      ],
+      "answer": 1,
+      "explain": "Код до первого await выполняется синхронно ('1'), затем функция приостанавливается и синхронный код продолжается ('3'), а '2' выводится в микротаске после."
+    },
+    {
+      "type": "choice",
+      "question": "Найди ошибку в коде, который должен обработать ошибку запроса:",
+      "code": "async function getData() {\n  const res = await fetch('/api/data');\n  return res.json();\n}\ngetData().then(data => console.log(data));",
+      "options": [
+        "fetch не может быть внутри async функции",
+        "Нет try/catch и нет .catch() — при ошибке будет unhandled rejection",
+        "res.json() нельзя использовать с await",
+        "Функция должна возвращать Promise.resolve(res.json())"
+      ],
+      "answer": 1,
+      "explain": "Если fetch или res.json() упадут, ошибка нигде не поймана — процесс получит unhandled promise rejection. Нужен try/catch внутри или .catch() после вызова."
+    },
+    {
+      "type": "choice",
+      "question": "У тебя есть 3 независимых запроса к разным API, результаты друг от друга не зависят. Как правильно их выполнить в реальном проекте?",
+      "options": [
+        "По очереди через await в цикле for",
+        "Через Promise.all, чтобы выполнить параллельно",
+        "Через setTimeout между каждым запросом",
+        "Через callback внутри callback"
+      ],
+      "answer": 1,
+      "explain": "Так как запросы независимы, последовательное ожидание — трата времени. Promise.all запускает их одновременно и ждёт завершения всех."
+    },
+    {
+      "type": "code",
+      "task": "Напиши функцию fetchAllUsers, которая принимает массив id пользователей и параллельно получает данные каждого через функцию fetchUser(id) (она уже дана и возвращает Promise<User>). Если хотя бы один запрос упадёт — вся функция должна отклониться с этой ошибкой. Оберни в try/catch и залогируй ошибку перед тем как перебросить её дальше.",
+      "starter": "async function fetchUser(id) {\n  // представим, что тут реальный запрос\n}\n\nasync function fetchAllUsers(ids) {\n  // твой код здесь\n}",
+      "hint": "Собери массив промисов через ids.map(id => fetchUser(id)), затем await Promise.all(...) внутри try/catch."
+    }
+  ]
+}

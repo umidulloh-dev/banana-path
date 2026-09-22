@@ -1,0 +1,101 @@
+{
+  "intro": {
+    "why": "В JavaScript переменная может в любой момент стать чем угодно: число превратится в строку, объект — в undefined, и узнаешь ты об этом только когда пользователь нажмёт кнопку и всё упадёт. Базовые типы TS — это способ заранее сказать: «здесь всегда строка, а здесь массив чисел», чтобы редактор и компилятор ловили ошибку до запуска. Это придумали не ради красоты, а чтобы перестать отлаживать опечатки в проде.",
+    "where": "Типизация тела запроса в Express (`req.body.price` — это число или строка из формы?), конфиг приложения (`PORT` из `process.env` всегда строка, её надо превращать в число), ответ стороннего API, который вы разбираете через `JSON.parse` и не знаете его формы. Кортежи встречаются в реальном коде постоянно: результат `[data, error]`, пара `[key, value]` из `Object.entries`, координаты. Литеральные типы — это статусы заказа, роли пользователя, режимы окружения.",
+    "without": "Без типов вы получите классику: `user.name.toUpperCase()` падает с `Cannot read property 'toUpperCase' of undefined`, потому что поле на самом деле называлось `userName`. Редактор перестанет подсказывать методы — набрав `res.`, вы увидите пустоту вместо списка. А если всё пометить как `any`, компилятор молча пропустит `PORT + 1`, где PORT — строка, и сервер стартанёт на порту `30001` вместо `3001`.",
+    "analogy": "Это как подписать контейнеры на кухне: «сахар», «соль» — иначе однажды посолишь чай, и узнаешь об этом только после первого глотка."
+  },
+  "cards": [
+    {
+      "title": "Примитивы и массивы",
+      "text": "Основные типы: `string`, `number`, `boolean`, `null`, `undefined`. TS умеет **выводить тип сам** (inference) — если вы пишете `let x = 5`, тип уже `number`, аннотация не нужна. Явно указывайте тип, когда значения пока нет или оно приходит извне. Массив пишется как `number[]` или `Array<number>` — обе записи равнозначны.",
+      "code": "let port: number = 3000;\nlet host = \"localhost\"; // string выведен сам\nlet tags: string[] = [\"node\", \"ts\"];\nlet scores: Array<number> = [1, 2, 3];\n\n// Ошибка: Type 'string' is not assignable to type 'number'\n// port = \"3000\";"
+    },
+    {
+      "title": "Кортежи (tuple)",
+      "text": "Кортеж — массив **фиксированной длины с известным типом на каждой позиции**. `[string, number]` — это не то же самое, что `(string | number)[]`: порядок и количество элементов зафиксированы. Используется там, где возвращают пару значений: `[data, error]`, `Object.entries()`, координаты, результат хука в стиле `useState`.",
+      "code": "let user: [string, number] = [\"umid\", 25];\n\n// Ошибка: порядок важен\n// user = [25, \"umid\"];\n\nfunction parsePair(s: string): [string, string] {\n  const [k, v] = s.split(\"=\");\n  return [k, v];\n}\n\nconst [key, value] = parsePair(\"env=prod\");"
+    },
+    {
+      "title": "any против unknown",
+      "text": "`any` **отключает проверку типов полностью** — с такой переменной можно делать что угодно, и TS промолчит. `unknown` — честный «я пока не знаю, что тут»: значение принять можно, но **использовать — только после проверки** (typeof, instanceof, валидация). Правило: для данных извне (JSON.parse, ответ API, тело запроса) берите `unknown`, а не `any`.",
+      "code": "let a: any = JSON.parse(raw);\na.foo.bar(); // TS молчит, рантайм падает\n\nlet u: unknown = JSON.parse(raw);\n// u.foo; // Ошибка компиляции\n\nif (typeof u === \"string\") {\n  console.log(u.toUpperCase()); // ок, тип сужен\n}"
+    },
+    {
+      "title": "Литеральные типы",
+      "text": "Тип может быть **конкретным значением**, а не просто `string`: `type Role = \"admin\" | \"user\"`. Это даёт автодополнение и ловит опечатки на этапе компиляции. Важный нюанс: `const mode = \"dev\"` даёт литеральный тип `\"dev\"`, а `let mode = \"dev\"` — просто `string`. Для объектов помогает `as const`.",
+      "code": "type Status = \"pending\" | \"paid\" | \"failed\";\n\nlet orderStatus: Status = \"paid\";\n// orderStatus = \"payed\"; // Ошибка: опечатка поймана\n\nconst config = { env: \"prod\" } as const;\n// config.env имеет тип \"prod\", а не string"
+    }
+  ],
+  "tasks": [
+    {
+      "type": "choice",
+      "question": "Какой главный практический смысл использовать `unknown` вместо `any` для данных из внешнего API?",
+      "options": [
+        "`unknown` работает быстрее в рантайме",
+        "`unknown` заставит вас проверить тип перед использованием, а `any` молча пропустит любую операцию",
+        "`unknown` автоматически валидирует JSON по схеме",
+        "Разницы нет, `unknown` — просто новое имя для `any`"
+      ],
+      "answer": 1,
+      "explain": "`any` выключает проверки и ошибка всплывёт только в рантайме. `unknown` запрещает любые операции, пока вы не сузите тип через typeof/instanceof или валидацию."
+    },
+    {
+      "type": "choice",
+      "question": "Что скажет компилятор TypeScript на этот код?",
+      "code": "let pair: [string, number] = [\"age\", 30];\npair = [\"age\", 30, true];",
+      "options": [
+        "Всё в порядке, кортеж можно расширять",
+        "Ошибка: Type '[string, number, boolean]' is not assignable to type '[string, number]'",
+        "Ошибка только в рантайме, компилятор промолчит",
+        "Всё в порядке, но третий элемент получит тип any"
+      ],
+      "answer": 1,
+      "explain": "Кортеж имеет фиксированную длину и типы по позициям — лишний элемент вызывает ошибку компиляции."
+    },
+    {
+      "type": "choice",
+      "question": "Найди ошибку в этом фрагменте:",
+      "code": "type Env = \"development\" | \"production\";\n\nlet current: Env = \"production\";\n\nfunction start(env: Env) {\n  console.log(env);\n}\n\nstart(process.env.NODE_ENV);",
+      "options": [
+        "`type Env` нельзя объявлять через union литералов",
+        "`let current: Env` должен быть `const`",
+        "`process.env.NODE_ENV` имеет тип `string | undefined` и не присваивается типу `Env` без проверки",
+        "Функция `start` должна возвращать значение"
+      ],
+      "answer": 2,
+      "explain": "`process.env.NODE_ENV` — это `string | undefined`, а `Env` — узкий набор литералов. Нужна проверка или явное сужение перед передачей."
+    },
+    {
+      "type": "choice",
+      "question": "Вы пишете хелпер, который возвращает результат и ошибку разом: `const [data, error] = await safeFetch(url)`. Какой тип возвращаемого значения корректнее?",
+      "options": [
+        "`Promise<any[]>`",
+        "`Promise<(User | Error)[]>`",
+        "`Promise<unknown>`",
+        "`Promise<[User | null, Error | null]>`"
+      ],
+      "answer": 3,
+      "explain": "Здесь нужен кортеж: ровно два элемента с известными типами на каждой позиции, чтобы деструктуризация давала правильные типы."
+    },
+    {
+      "type": "choice",
+      "question": "Какой тип выведет TypeScript для переменной `mode`?",
+      "code": "let mode = \"dark\";\nconst theme = \"dark\";",
+      "options": [
+        "`mode: string`, `theme: \"dark\"`",
+        "`mode: \"dark\"`, `theme: \"dark\"`",
+        "`mode: string`, `theme: string`",
+        "`mode: any`, `theme: any`"
+      ],
+      "answer": 0,
+      "explain": "`let` можно переприсвоить, поэтому TS расширяет тип до `string`. `const` изменить нельзя — тип остаётся литеральным `\"dark\"`."
+    },
+    {
+      "type": "code",
+      "task": "Напиши функцию `parseConfig(raw: unknown)`, которая безопасно разбирает конфиг. Требования: объяви тип `LogLevel` как литеральный union (\"debug\" | \"info\" | \"error\"), объяви тип `AppConfig` с полями `port: number` и `level: LogLevel`. Функция принимает `unknown`, проверяет, что это объект с нужными полями, и возвращает кортеж `[AppConfig | null, string | null]` — конфиг или сообщение об ошибке.",
+      "starter": "type LogLevel = // ...\n\ntype AppConfig = {\n  port: number;\n  level: LogLevel;\n};\n\nconst LEVELS: LogLevel[] = [\"debug\", \"info\", \"error\"];\n\nfunction parseConfig(raw: unknown): [AppConfig | null, string | null] {\n  // 1) проверь, что raw — объект и не null\n  // 2) приведи к Record<string, unknown> и проверь поля\n  // 3) верни [config, null] или [null, \"текст ошибки\"]\n}\n\nconsole.log(parseConfig({ port: 3000, level: \"info\" }));\nconsole.log(parseConfig({ port: \"3000\", level: \"warn\" }));",
+      "hint": "Начни с `if (typeof raw !== \"object\" || raw === null) return [null, \"...\"]`. Дальше сохрани `const obj = raw as Record<string, unknown>` и проверяй `typeof obj.port === \"number\"`. Для уровня пригодится `LEVELS.includes(obj.level as LogLevel)` — это и есть сужение до литерального типа."
+    }
+  ]
+}
