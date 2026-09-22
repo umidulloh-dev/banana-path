@@ -73,6 +73,12 @@ export class AnthropicService implements OnModuleInit {
         throw ApiError.upstream('The answer was too long and got cut off — raise ANTHROPIC_MAX_TOKENS');
       }
 
+      // Token accounting is the only way to know what a feature actually costs.
+      // Railway keeps these lines, so `railway logs` answers "where did the
+      // credits go" without guessing.
+      const { input_tokens: input, output_tokens: output } = message.usage;
+      this.logger.log(`usage model=${message.model} in=${input} out=${output}`);
+
       return message.content
         .filter((block): block is Anthropic.TextBlock => block.type === 'text')
         .map((block) => block.text)

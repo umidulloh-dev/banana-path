@@ -702,6 +702,17 @@ function overlayShell(){
 }
 function closeOverlay(){ const o = document.getElementById("ov"); if (o) o.remove(); document.body.style.overflow = ""; L = null; renderAll(); setChatCtx(null); }
 
+// Готовый урок из пака. null — значит урока нет, надо просить у ментора.
+async function packedLesson(id, signal){
+  try {
+    const res = await fetch("lessons/" + encodeURIComponent(id) + ".json", { signal });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch(e){
+    if (e && e.name === "AbortError") throw { code:"cancelled" };
+    return null;
+  }
+}
 async function startLesson(n, fresh = false){
   overlayShell();
   setChatCtx(n);
@@ -714,12 +725,19 @@ async function startLesson(n, fresh = false){
   document.getElementById("cancelGen").onclick = () => { if (L && L.ctl) L.ctl.abort(); closeOverlay(); };
   const tipTimer = setInterval(() => { const el = document.getElementById("tip"); if (!el) return clearInterval(tipTimer); ti = (ti+1) % TIPS.length; el.style.opacity = 0; setTimeout(() => { el.textContent = TIPS[ti]; el.style.opacity = 1; }, 300); const e2 = document.getElementById("elapsed"); if (e2 && L) e2.textContent = Math.round((Date.now()-L.started)/1000) + " сек"; }, 3500);
 
-  const sample = await getSample();
-  if (!sample){ clearInterval(tipTimer); return lessonUnavailable(n, "AI-ментор сейчас недоступен. Попробуй обновить страницу."); }
   const variant = fresh ? Math.floor(Math.random()*1000)+2 : ((S.done[n.id] ? (S.done[n.id].runs || 1) : 0) + 1);
   const ctl = new AbortController(); L.ctl = ctl;
   try {
-    const data = await sample.json(lessonPrompt(n, variant), { signal: ctl.signal, cache: { gcTime: 86400000 } });
+    // Уроки лежат готовыми в public/lessons — открываются мгновенно и не тратят
+    // токены. К ментору идём только если урока нет в паке или ты сам попросил
+    // новый вариант.
+    let data = fresh ? null : await packedLesson(n.id, ctl.signal);
+    L.packed = !!data;
+    if (!data){
+      const sample = await getSample();
+      if (!sample){ clearInterval(tipTimer); return lessonUnavailable(n, "AI-ментор сейчас недоступен. Попробуй обновить страницу."); }
+      data = await sample.json(lessonPrompt(n, variant), { signal: ctl.signal, cache: { gcTime: 86400000 } });
+    }
     clearInterval(tipTimer);
     if (!L || L.n !== n) return;
     const lesson = validLesson(data);
@@ -876,7 +894,7 @@ function failLesson(){
   document.getElementById("ovBody").innerHTML = `<div class="result"><div class="m">${mascot("sad")}</div><h2 style="color:var(--red)">Сердечки закончились</h2><p class="muted" style="max-width:420px;margin:0">Это нормально. Разбери ошибки с ментором и пройди урок ещё раз, задачи будут новые.</p></div>`;
   setFoot(`<div class="msg"></div><button class="btn ghost" id="endBtn">На карту</button><button class="btn" id="againBtn">Пройти заново</button>`);
   document.getElementById("endBtn").onclick = closeOverlay;
-  document.getElementById("againBtn").onclick = () => startLesson(L.n, true);
+  document.getElementById("againBtn").onclick = () => startLesson(L.n);
 }
 function finishLesson(){
   const n = L.n; L.phase = "result";
@@ -900,9 +918,10 @@ function finishLesson(){
       <div class="tile" style="--tc:var(--blue)"><div class="h">Время</div><div class="v">${Math.floor(secs/60)}:${String(secs%60).padStart(2,"0")}</div></div>
     </div>
     <div class="muted small">+${bananas} 🍌 в копилку</div></div>`;
-  setFoot(`<div class="msg"></div><button class="btn ghost" id="againBtn">Ещё раз с новыми задачами</button><button class="btn" id="endBtn">Продолжить</button>`);
+  setFoot(`<div class="msg"><button class="btn ghost" id="againBtn">Ещё раз</button><button class="btn ghost" id="freshBtn" title="Ментор напишет новый вариант — тратит токены">Новый вариант ✨</button></div><button class="btn" id="endBtn">Продолжить</button>`);
   document.getElementById("endBtn").onclick = () => { closeOverlay(); setTimeout(scrollToCurrent, 60); };
-  document.getElementById("againBtn").onclick = () => startLesson(n, true);
+  document.getElementById("againBtn").onclick = () => startLesson(n);
+  document.getElementById("freshBtn").onclick = () => startLesson(n, true);
 }
 
 /* =============================== CHECKLIST NODES =============================== */
