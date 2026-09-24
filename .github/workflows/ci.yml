@@ -45,6 +45,10 @@ jobs:
           cache: npm
           cache-dependency-path: server/package-lock.json
 
+      - name: Frontend resume check
+        working-directory: ${{ github.workspace }}
+        run: node scripts/check-resume.mjs
+
       - run: npm ci
       - run: npx prisma generate
 

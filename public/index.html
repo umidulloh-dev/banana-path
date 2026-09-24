@@ -395,7 +395,7 @@ const byId = id => ALL.find(n => n.id === id);
 const MAIN_CHAIN = ["fund","frame","ai","middle","market"];
 
 /* =============================== STATE =============================== */
-const DEFAULT_STATE = () => ({ v:1, done:{"ts-basic":{xp:0,at:0},"ts-interface":{xp:0,at:0}}, xp:0, bananas:0, streak:0, lastDay:null, today:{day:null,xp:0}, checks:{}, leet:{easy:0,medium:0}, sound:true, dailyGoal:30 });
+const DEFAULT_STATE = () => ({ v:1, done:{"ts-basic":{xp:0,at:0},"ts-interface":{xp:0,at:0}}, xp:0, bananas:0, streak:0, lastDay:null, today:{day:null,xp:0}, checks:{}, leet:{easy:0,medium:0}, sound:true, dailyGoal:30, resume:{} });
 let S = DEFAULT_STATE();
 const LS_KEY = "banana-path-v1";
 let dbDoc = null;
@@ -700,7 +700,88 @@ function overlayShell(){
   document.getElementById("ovX").onclick = () => { if (L && L.ctl) L.ctl.abort(); if (!L || L.phase === "result" || L.phase === "loading" || confirm("Выйти из урока? Прогресс урока не сохранится.")) closeOverlay(); };
   return ov;
 }
-function closeOverlay(){ const o = document.getElementById("ov"); if (o) o.remove(); document.body.style.overflow = ""; L = null; renderAll(); setChatCtx(null); }
+function closeOverlay(){ saveResume(); const o = document.getElementById("ov"); if (o) o.remove(); document.body.style.overflow = ""; L = null; renderAll(); setChatCtx(null); }
+
+/* ---------------------------- НЕЗАКОНЧЕННЫЙ УРОК ----------------------------
+   Закрыть урок, сходить починить код и вернуться — нормальный рабочий цикл,
+   поэтому заход в урок переживает закрытие окна: где ты был, что уже ответил,
+   сколько сердечек осталось и главное — код, который ты написал.
+   Снимок живёт в S, значит уезжает на сервер вместе с остальным прогрессом. */
+const RESUME_KEEP = 3;
+
+function resumeFor(id){
+  const all = S.resume || {};
+  const snap = all[id];
+  if (!snap || snap.v !== 1 || !snap.lesson || !Array.isArray(snap.lesson.tasks)) return null;
+  return snap;
+}
+function dropResume(id){
+  if (S.resume && S.resume[id]){ delete S.resume[id]; save(); }
+}
+function saveResume(){
+  if (!L || !L.n || !L.tasks || L.phase === "loading" || L.phase === "result") return;
+  // Открыл и сразу закрыл — возобновлять нечего, не надо потом об этом спрашивать.
+  const touched = L.answered > 0 || L.cardIdx > 0 || L.phase === "tasks" || Object.keys(L.code || {}).length > 0;
+  if (!touched) return dropResume(L.n.id);
+  if (!S.resume) S.resume = {};
+  S.resume[L.n.id] = {
+    v: 1,
+    savedAt: Date.now(),
+    lesson: { intro: L.intro || null, cards: L.cards || [], tasks: L.tasks },
+    phase: L.phase, cardIdx: L.cardIdx || 0,
+    queue: L.queue.map(t => t._i),
+    hearts: L.hearts, answered: L.answered, correctFirst: L.correctFirst,
+    wrong: [...L.wrongSet], code: L.code || {}, started: L.started, variant: L.variant
+  };
+  // Держим только несколько последних, чтобы состояние не росло без предела.
+  // Текущий урок из отбора исключён: вычистить снимок, который только что
+  // записали, — ровно то, чего делать нельзя.
+  const others = Object.keys(S.resume)
+    .filter(id => id !== L.n.id)
+    .sort((a, b) => (S.resume[b].savedAt || 0) - (S.resume[a].savedAt || 0));
+  for (const id of others.slice(RESUME_KEEP - 1)) delete S.resume[id];
+  save();
+}
+function applyLesson(n, lesson, variant){
+  L.intro = lesson.intro || null;
+  L.cards = lesson.cards || [];
+  L.tasks = lesson.tasks;
+  L.queue = lesson.tasks.map((t, i) => Object.assign({ _i:i }, t));
+  L.code = {};
+  L.total = (L.intro ? 1 : 0) + L.cards.length + L.tasks.length;
+  L.variant = variant;
+  L.phase = L.intro ? "intro" : (L.cards.length ? "cards" : "tasks");
+  L.cardIdx = 0; L.started = Date.now();
+}
+function restoreLesson(n, snap){
+  const tasks = snap.lesson.tasks;
+  L.intro = snap.lesson.intro || null;
+  L.cards = snap.lesson.cards || [];
+  L.tasks = tasks;
+  L.queue = (snap.queue || []).filter(i => tasks[i]).map(i => Object.assign({ _i:i }, tasks[i]));
+  L.code = snap.code || {};
+  L.total = (L.intro ? 1 : 0) + L.cards.length + tasks.length;
+  L.variant = snap.variant;
+  L.phase = snap.phase === "intro" || snap.phase === "cards" ? snap.phase : "tasks";
+  L.cardIdx = snap.cardIdx || 0;
+  L.hearts = typeof snap.hearts === "number" ? snap.hearts : 3;
+  L.answered = snap.answered || 0;
+  L.correctFirst = snap.correctFirst || 0;
+  L.wrongSet = new Set(snap.wrong || []);
+  L.started = snap.started || Date.now();
+  const hv = document.getElementById("heartsV"); if (hv) hv.textContent = Math.max(0, L.hearts);
+}
+function offerResume(n, snap){
+  const left = (snap.queue || []).length;
+  const when = new Date(snap.savedAt || Date.now());
+  const stamp = when.toLocaleString("ru-RU", { day:"numeric", month:"long", hour:"2-digit", minute:"2-digit" });
+  document.getElementById("ovBody").innerHTML = `<div class="loading"><div class="m">${mascot("happy")}</div>
+    <div style="font-weight:800;font-size:22px">Ты не закончил этот урок</div>
+    <div class="muted" style="max-width:420px">Остановился ${esc(stamp)}. Осталось задач: ${left}, сердечек: ${Math.max(0, snap.hearts)}. Код, который ты написал, на месте.</div></div>`;
+  setFoot(`<div class="msg"><button class="btn ghost" id="restartLesson">Начать заново</button></div><button class="btn" id="continueLesson">Продолжить</button>`);
+  document.getElementById("continueLesson").onclick = () => { sfx.tap(); restoreLesson(n, snap); step(); };
+  document.getElementById("restartLesson").onclick = () => { dropResume(n.id); startLesson(n); };
+}
 
 // Готовый урок из пака. null — значит урока нет, надо просить у ментора.
 async function packedLesson(id, signal){
@@ -716,8 +797,13 @@ async function packedLesson(id, signal){
 async function startLesson(n, fresh = false){
   overlayShell();
   setChatCtx(n);
-  L = { n, phase:"loading", hearts:3, cards:[], queue:[], idx:0, total:0, correctFirst:0, answered:0, started:Date.now(), wrongSet:new Set() };
+  L = { n, phase:"loading", hearts:3, cards:[], tasks:[], queue:[], code:{}, idx:0, total:0, correctFirst:0, answered:0, started:Date.now(), wrongSet:new Set() };
   document.getElementById("heartsV").textContent = 3;
+
+  // Незаконченный заход? Не затираем его молча — спрашиваем.
+  const saved = fresh ? null : resumeFor(n.id);
+  if (saved) return offerResume(n, saved);
+
   const body = document.getElementById("ovBody");
   let ti = Math.floor(Math.random()*TIPS.length);
   body.innerHTML = `<div class="loading"><div class="m">${mascot("wow")}</div><div style="font-weight:800;font-size:22px">Ментор собирает урок<span class="dots"></span></div><div class="muted tip" id="tip">${TIPS[ti]}</div><div class="muted small" id="elapsed"></div></div>`;
@@ -742,9 +828,7 @@ async function startLesson(n, fresh = false){
     if (!L || L.n !== n) return;
     const lesson = validLesson(data);
     if (!lesson) return lessonUnavailable(n, "Ментор прислал пустой урок. Попробуй ещё раз.", true);
-    L.intro = lesson.intro; L.cards = lesson.cards; L.queue = lesson.tasks.map((t, i) => Object.assign({ _i:i }, t));
-    L.total = (L.intro ? 1 : 0) + L.cards.length + L.queue.length; L.variant = variant;
-    L.phase = L.intro ? "intro" : (L.cards.length ? "cards" : "tasks"); L.cardIdx = 0; L.started = Date.now();
+    applyLesson(n, lesson, variant);
     step();
   } catch(e){
     clearInterval(tipTimer);
@@ -773,6 +857,7 @@ function progress(){
 function step(){
   if (!L) return;
   progress();
+  saveResume();
   if (L.phase === "intro"){
     const w = L.intro;
     document.getElementById("ovBody").innerHTML = `<div class="kicker">Зачем эта тема</div>
@@ -828,17 +913,26 @@ function checkChoice(){
 function renderCode(t){
   document.getElementById("ovBody").innerHTML = `<div class="kicker">Задача на код, проверяет ментор</div>
     <div class="q" style="font-size:19px">${inline(t.task)}</div>
-    <textarea class="code" id="codeIn" spellcheck="false" aria-label="Твоё решение">${esc(t.starter || "")}</textarea>
+    <textarea class="code" id="codeIn" spellcheck="false" aria-label="Твоё решение">${esc(L.code[t._i] !== undefined ? L.code[t._i] : (t.starter || ""))}</textarea>
     ${t.hint ? `<details class="hint"><summary>Подсказка</summary><div class="md" style="margin-top:6px">${md(t.hint)}</div></details>` : ""}
     <div id="review" class="review"></div>`;
   const ta = document.getElementById("codeIn");
   ta.addEventListener("keydown", e => { if (e.key === "Tab"){ e.preventDefault(); const s = ta.selectionStart; ta.setRangeText("  ", s, ta.selectionEnd, "end"); } });
+  // Пишем в снимок с задержкой: на каждое нажатие сохраняться незачем.
+  let codeTimer = null;
+  ta.addEventListener("input", () => {
+    L.code[t._i] = ta.value;
+    clearTimeout(codeTimer);
+    codeTimer = setTimeout(saveResume, 500);
+  });
   setFoot(`<div class="msg"><button class="btn ghost" id="skipCode">Пропустить</button></div><button class="btn" id="checkCode">Проверить код</button>`);
   document.getElementById("skipCode").onclick = () => { L.checked = true; L.answered++; L.queue.shift(); step(); };
   document.getElementById("checkCode").onclick = () => checkCode(t);
 }
 async function checkCode(t){
   const code = document.getElementById("codeIn").value.trim();
+  L.code[t._i] = document.getElementById("codeIn").value;
+  saveResume();
   if (!code || code === (t.starter || "").trim()){ toast("Сначала напиши решение"); return; }
   const sample = await getSample(); if (!sample){ toast("Ментор недоступен"); return; }
   setFoot(`<div class="msg muted">Ментор читает твой код<span class="dots"></span></div><button class="btn" disabled>Проверяю</button>`);
@@ -864,6 +958,12 @@ pass=true, если решение корректно решает задачу 
     document.getElementById("checkCode").onclick = () => checkCode(t);
   }
 }
+// Код задачи «как сейчас»: поле ввода, если урок открыт, иначе сохранённый снимок.
+function currentCode(t){
+  const ta = document.getElementById("codeIn");
+  if (ta) return ta.value;
+  return (L && L.code && L.code[t._i]) || "";
+}
 function verdict(ok, explainHtml, extra, t, isCode){
   const first = !L.wrongSet.has(t._i);
   if (ok){ sfx.ok(); if (first) L.correctFirst++; L.answered++; }
@@ -878,7 +978,7 @@ function verdict(ok, explainHtml, extra, t, isCode){
       <button class="btn ${ok ? "" : "red"}" id="contBtn">Продолжить</button>`, ok ? "ok" : "bad");
   const wb = document.getElementById("whyBtn");
   if (wb) wb.onclick = () => {
-    const q = t.type === "choice" ? `Я ошибся в вопросе: "${t.question}"${t.code ? "\nКод:\n" + t.code : ""}\nВарианты: ${t.options.map((o,i)=>`${i+1}) ${o}`).join("; ")}\nЯ выбрал: ${L.sel >= 0 ? t.options[L.sel] : "не знал"}. Правильно: ${t.options[t.answer]}. Объясни подробно, почему, с примером.` : `Разбери мою ошибку в задаче: ${t.task}\nМой код:\n${document.getElementById("codeIn")?.value || ""}`;
+    const q = t.type === "choice" ? `Я ошибся в вопросе: "${t.question}"${t.code ? "\nКод:\n" + t.code : ""}\nВарианты: ${t.options.map((o,i)=>`${i+1}) ${o}`).join("; ")}\nЯ выбрал: ${L.sel >= 0 ? t.options[L.sel] : "не знал"}. Правильно: ${t.options[t.answer]}. Объясни подробно, почему, с примером.` : `Разбери мою ошибку в задаче: ${t.task}\nНиже — АКТУАЛЬНАЯ версия моего кода на сейчас. Если раньше в переписке был мой код, он устарел: смотри только на этот.\n\`\`\`ts\n${currentCode(t)}\n\`\`\``;
     openChat(q);
   };
   document.getElementById("contBtn").onclick = () => {
@@ -891,6 +991,7 @@ function verdict(ok, explainHtml, extra, t, isCode){
 }
 function failLesson(){
   L.phase = "result";
+  dropResume(L.n.id);
   document.getElementById("ovBody").innerHTML = `<div class="result"><div class="m">${mascot("sad")}</div><h2 style="color:var(--red)">Сердечки закончились</h2><p class="muted" style="max-width:420px;margin:0">Это нормально. Разбери ошибки с ментором и пройди урок ещё раз, задачи будут новые.</p></div>`;
   setFoot(`<div class="msg"></div><button class="btn ghost" id="endBtn">На карту</button><button class="btn" id="againBtn">Пройти заново</button>`);
   document.getElementById("endBtn").onclick = closeOverlay;
@@ -898,6 +999,7 @@ function failLesson(){
 }
 function finishLesson(){
   const n = L.n; L.phase = "result";
+  dropResume(n.id);
   const tasksTotal = new Set([...Array(L.total - L.cards.length).keys()]).size;
   const acc = Math.round(L.correctFirst / Math.max(1, tasksTotal) * 100);
   const isCp = n.kind === "checkpoint";
@@ -1000,7 +1102,7 @@ function chatRules(){
 Роадмап: Фундамент (TypeScript, Node под капотом, PostgreSQL, Git) → NestJS и архитектура → AI-интеграции (LLM API, стриминг, RAG, агенты) → Redis, BullMQ, Docker, CI/CD → 3 проекта в портфолио → штурм рынка (резюме, профили, отклики, интервью).
 Недавно пройдено: ${done || "—"}.
 Текущая тема: ${n ? "«" + n.title + "» (блок «" + n.unit.title + "»)" : "общая"}.
-Правила: отвечай по-русски, коротко и по делу; код и имена переменных — на английском, код в блоках \`\`\`ts. Будь строгим, но доброжелательным. Не выдавай готовые решения задач сразу — сначала подсказка; полное решение, только если он прямо попросит. Когда уместно, заканчивай коротким вопросом на проверку понимания. Если он пишет транслитом — отвечай кириллицей.`;
+Правила: если в переписке встречается несколько версий кода ученика, разбирай только последнюю присланную — предыдущие он уже правил, и претензии к ним больше не актуальны. Отвечай по-русски, коротко и по делу; код и имена переменных — на английском, код в блоках \`\`\`ts. Будь строгим, но доброжелательным. Не выдавай готовые решения задач сразу — сначала подсказка; полное решение, только если он прямо попросит. Когда уместно, заканчивай коротким вопросом на проверку понимания. Если он пишет транслитом — отвечай кириллицей.`;
 }
 function addMsg(role, html, cls = ""){
   const box = document.getElementById("drMsgs"); const d = document.createElement("div");

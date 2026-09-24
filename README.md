@@ -149,6 +149,7 @@ Building the lesson pack runs from the repository root, not `server/`:
 | --- | --- |
 | `node scripts/build-lessons.mjs --dry-run` | Show which lessons are missing |
 | `node scripts/build-lessons.mjs --base <url> --password <pw>` | Build the missing ones |
+| `node scripts/check-resume.mjs` | Check that an unfinished lesson survives closing the window |
 
 ---
 
